@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YoloScripts — Premium Digital Products</title>
+<meta name="description" content="YoloScripts — premium digital scripts, tools and guides. Instant delivery, secure checkout.">
+<link rel="icon" href="YOLO.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================= RESET ============================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{min-height:100vh;overflow-x:hidden;}
+img{max-width:100%;display:block;}
+button,input,textarea,select{font-family:inherit;color:inherit;}
+a{color:inherit;text-decoration:none;}
+::selection{background:var(--accent);color:#fff;}
+
+/* ============================= THEME ============================= */
+:root{
+  --bg:#050310;
+  --bg-2:#0b0620;
+  --panel:rgba(24,14,46,.55);
+  --panel-solid:#150c2b;
+  --border:rgba(168,85,247,.28);
+  --border-strong:rgba(196,132,252,.55);
+  --accent:#a855f7;
+  --accent-2:#c084fc;
+  --accent-3:#7c3aed;
+  --accent-glow:rgba(168,85,247,.55);
+  --text:#f4f0ff;
+  --text-dim:#b6a9d6;
+  --text-faint:#8577a8;
+  --success:var(--accent);
+  --danger:#f43f5e;
+  --warning:#f59e0b;
+  --radius:16px;
+  --radius-sm:10px;
+  --font-display:'Orbitron',sans-serif;
+  --font-body:'Rajdhani',"Segoe UI",sans-serif;
+  --shadow-glow:0 0 24px var(--accent-glow);
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.5;
+}
+
+h1,h2,h3,h4,.font-display{font-family:var(--font-display);letter-spacing:.02em;}
+
+/* ============================= BACKGROUND ============================= */
+#nebula-canvas{
+  position:fixed;inset:0;width:100%;height:100%;z-index:-3;background:
+    radial-gradient(ellipse at 20% 20%, #1a0b38 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 30%, #240f45 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, #170a2e 0%, transparent 60%),
+    var(--bg);
+}
+.nebula-blob{
+  position:fixed;border-radius:50%;filter:blur(70px);opacity:.35;z-index:-2;pointer-events:none;
+  animation:floatNebula 26s ease-in-out infinite;
+}
+.nebula-blob.b1{width:520px;height:520px;background:#8b2fe0;top:-10%;left:-8%;animation-duration:30s;}
+.nebula-blob.b2{width:420px;height:420px;background:#5b21b6;top:40%;right:-10%;animation-duration:24s;animation-delay:-8s;}
+.nebula-blob.b3{width:460px;height:460px;background:#a855f7;bottom:-15%;left:20%;animation-duration:34s;animation-delay:-14s;}
+@keyframes floatNebula{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(4%,-5%) scale(1.12);}
+}
+.seam-ring{
+  position:fixed;top:50%;left:50%;width:1100px;height:1100px;margin:-550px 0 0 -550px;
+  border:1px solid var(--border);border-radius:50%;opacity:.12;z-index:-1;pointer-events:none;
+  animation:spinSlow 120s linear infinite;
+}
+.seam-ring::before{
+  content:'';position:absolute;inset:60px;border:1px solid var(--border);border-radius:50%;
+}
+@keyframes spinSlow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.shooting-star{
+  position:fixed;width:2px;height:2px;background:#fff;border-radius:50%;z-index:-1;pointer-events:none;
+  box-shadow:0 0 6px 2px rgba(216,180,254,.8);opacity:0;
+  animation:shoot 7s linear infinite;
+}
+.shooting-star::before{
+  content:'';position:absolute;top:50%;right:0;width:80px;height:1px;
+  background:linear-gradient(90deg,rgba(216,180,254,.9),transparent);transform:translateY(-50%);
+}
+.shooting-star.s1{top:8%;left:10%;animation-delay:0s;}
+.shooting-star.s2{top:22%;left:70%;animation-delay:3.5s;}
+.shooting-star.s3{top:55%;left:35%;animation-delay:6.2s;}
+@keyframes shoot{
+  0%{opacity:0;transform:translate(0,0) rotate(-35deg);}
+  2%{opacity:1;}
+  16%{opacity:0;transform:translate(340px,220px) rotate(-35deg);}
+  100%{opacity:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .nebula-blob,.seam-ring,.shooting-star{animation:none;}
+}
+
+/* ============================= LAYOUT HELPERS ============================= */
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px;}
+.hidden{display:none !important;}
+.glow-text{text-shadow:0 0 10px var(--accent-glow),0 0 26px rgba(168,85,247,.35);}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--font-display);font-weight:700;font-size:.85rem;letter-spacing:.04em;text-transform:uppercase;
+  padding:13px 22px;border-radius:999px;border:1px solid var(--border-strong);
+  background:linear-gradient(135deg,var(--accent-3),var(--accent));color:#fff;cursor:pointer;
+  box-shadow:0 4px 20px rgba(124,58,237,.35);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;
+  white-space:nowrap;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(168,85,247,.5);filter:brightness(1.08);}
+.btn:active{transform:translateY(0);}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn.ghost{background:transparent;box-shadow:none;color:var(--text);border-color:var(--border);}
+.btn.ghost:hover{border-color:var(--border-strong);background:rgba(168,85,247,.08);}
+.btn.sm{padding:8px 16px;font-size:.72rem;}
+.btn.danger{background:linear-gradient(135deg,#9f1239,#f43f5e);border-color:rgba(244,63,94,.5);}
+.btn.block{width:100%;}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;
+  background:rgba(168,85,247,.14);border:1px solid var(--border);font-size:.72rem;font-weight:600;
+  color:var(--accent-2);text-transform:uppercase;letter-spacing:.05em;
+}
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+.field input[type=text],.field input[type=number],.field input[type=url],.field input[type=email],.field input[type=password],.field textarea,.field select{
+  width:100%;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:rgba(10,5,22,.6);color:var(--text);font-family:var(--font-body);font-size:.95rem;outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(168,85,247,.18);}
+.field textarea{resize:vertical;min-height:90px;}
+.field .hint{font-size:.75rem;color:var(--text-faint);margin-top:5px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:640px){.field-row{grid-template-columns:1fr;}}
+.divider{height:1px;background:var(--border);margin:24px 0;border:none;}
+.scrollbar-thin::-webkit-scrollbar{width:8px;height:8px;}
+.scrollbar-thin::-webkit-scrollbar-thumb{background:var(--accent-3);border-radius:8px;}
+.scrollbar-thin::-webkit-scrollbar-track{background:transparent;}
+
+/* ============================= HEADER ============================= */
+header.site-header{
+  position:sticky;top:0;z-index:40;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:rgba(5,3,16,.72);border-bottom:1px solid var(--border);
+}
+.announce-bar{
+  background:linear-gradient(90deg,#3b0764,#7c3aed,#3b0764);text-align:center;font-size:.82rem;
+  font-weight:600;padding:7px 12px;color:#fff;letter-spacing:.02em;
+}
+.announce-bar button{background:none;border:none;color:#fff;opacity:.7;cursor:pointer;margin-left:10px;font-size:.9rem;}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;gap:16px;}
+.brand{display:flex;align-items:center;gap:12px;cursor:pointer;}
+.brand img{width:42px;height:42px;border-radius:10px;filter:drop-shadow(0 0 10px var(--accent-glow));}
+.brand .name{font-family:var(--font-display);font-weight:800;font-size:1.25rem;letter-spacing:.03em;}
+.brand .name span{color:var(--accent-2);}
+.brand .tagline{font-size:.68rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-top:-2px;}
+nav.main-nav{display:flex;align-items:center;gap:6px;}
+nav.main-nav a{
+  padding:9px 16px;border-radius:999px;font-weight:600;font-size:.88rem;color:var(--text-dim);transition:all .15s ease;
+}
+nav.main-nav a:hover,nav.main-nav a.active{color:#fff;background:rgba(168,85,247,.16);}
+.header-actions{display:flex;align-items:center;gap:10px;}
+.icon-btn{
+  position:relative;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(168,85,247,.1);border:1px solid var(--border);cursor:pointer;font-size:1.1rem;transition:all .15s ease;
+}
+.icon-btn:hover{border-color:var(--border-strong);background:rgba(168,85,247,.2);}
+.cart-badge{
+  position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:.65rem;font-weight:800;
+  min-width:17px;height:17px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 4px;
+}
+.user-chip{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;background:rgba(168,85,247,.1);border:1px solid var(--border);cursor:pointer;}
+.user-chip img{width:28px;height:28px;border-radius:50%;}
+.user-chip span{font-weight:600;font-size:.85rem;}
+.mobile-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.5rem;cursor:pointer;}
+@media (max-width:920px){
+  nav.main-nav{display:none;}
+  .mobile-toggle{display:block;}
+  .brand .tagline{display:none;}
+}
+
+/* ============================= HERO ============================= */
+.hero{padding:90px 24px 70px;text-align:center;position:relative;}
+.hero .badge-row{display:flex;justify-content:center;gap:10px;margin-bottom:22px;flex-wrap:wrap;}
+.hero h1{font-size:clamp(2.4rem,6vw,4.2rem);font-weight:900;line-height:1.05;margin-bottom:18px;}
+.hero h1 .accent{background:linear-gradient(135deg,var(--accent-2),var(--accent-3));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero p.sub{max-width:620px;margin:0 auto 34px;color:var(--text-dim);font-size:1.15rem;}
+.hero .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.stat-strip{display:flex;justify-content:center;gap:48px;margin-top:60px;flex-wrap:wrap;}
+.stat-strip .stat{text-align:center;}
+.stat-strip .stat .num{font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--accent-2);}
+.stat-strip .stat .lbl{font-size:.78rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;}
+
+/* ============================= SECTIONS ============================= */
+section{padding:60px 24px;}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:14px;}
+.section-head h2{font-size:1.9rem;font-weight:800;}
+.section-head p{color:var(--text-faint);margin-top:6px;}
+
+/* Product grid */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:22px;}
+.product-card{
+  overflow:hidden;position:relative;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;cursor:pointer;
+  display:flex;flex-direction:column;
+}
+.product-card:hover{transform:translateY(-6px);border-color:var(--border-strong);box-shadow:0 16px 40px rgba(88,28,135,.4);}
+.product-card .thumb{
+  height:170px;background:linear-gradient(135deg,#1c0f38,#2c1150);position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:2.6rem;
+}
+.product-card .thumb img{width:100%;height:100%;object-fit:cover;}
+.product-card .badges{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap;}
+.product-card .badge{font-size:.65rem;font-weight:800;padding:4px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em;}
+.badge.featured{background:linear-gradient(135deg,#f59e0b,#f97316);color:#1a0d00;}
+.badge.new{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;}
+.badge.sale{background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff;}
+.wish-toggle{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:rgba(5,3,16,.6);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem;z-index:2;}
+.wish-toggle.active{color:#f43f5e;border-color:#f43f5e;}
+.product-card .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.product-card .cat{font-size:.7rem;color:var(--accent-2);text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+.product-card h3{font-size:1.08rem;font-weight:700;}
+.product-card .desc{font-size:.85rem;color:var(--text-faint);flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.product-card .price-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
+.price{font-family:var(--font-display);font-weight:800;font-size:1.2rem;color:#fff;}
+.price.compare{font-size:.85rem;color:var(--text-faint);text-decoration:line-through;font-weight:500;margin-right:6px;}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;}
+.filter-chip{padding:8px 16px;border-radius:999px;border:1px solid var(--border);font-size:.82rem;font-weight:600;cursor:pointer;color:var(--text-dim);transition:all .15s ease;background:transparent;}
+.filter-chip:hover{border-color:var(--border-strong);}
+.filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.search-box{flex:1;min-width:200px;position:relative;}
+.search-box input{width:100%;padding:10px 14px 10px 38px;border-radius:999px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);}
+.search-box::before{content:'🔍';position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:.85rem;opacity:.6;}
+.empty-state{text-align:center;padding:70px 20px;color:var(--text-faint);}
+.empty-state .emoji{font-size:2.6rem;margin-bottom:14px;}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px;}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:36px;margin-bottom:34px;}
+@media (max-width:760px){.footer-grid{grid-template-columns:1fr 1fr;}}
+.footer-grid h4{font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-2);margin-bottom:14px;}
+.footer-grid a,.footer-grid p{display:block;color:var(--text-faint);font-size:.88rem;margin-bottom:9px;}
+.footer-grid a:hover{color:var(--text);}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:22px;border-top:1px solid var(--border);color:var(--text-faint);font-size:.8rem;}
+.social-link{width:34px;height:34px;border-radius:50%;background:rgba(168,85,247,.1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+.social-link:hover{border-color:var(--border-strong);background:rgba(168,85,247,.2);}
+
+/* ============================= MODAL / DRAWER / TOAST ============================= */
+.overlay{
+  position:fixed;inset:0;background:rgba(2,1,8,.72);backdrop-filter:blur(4px);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .18s ease;
+}
+.overlay.open{opacity:1;pointer-events:auto;}
+.modal{
+  background:var(--panel-solid);border:1px solid var(--border-strong);border-radius:20px;max-width:640px;width:100%;
+  max-height:88vh;overflow-y:auto;position:relative;transform:translateY(14px) scale(.98);transition:transform .18s ease;
+  box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(124,58,237,.15);
+}
+.overlay.open .modal{transform:translateY(0) scale(1);}
+.modal.wide{max-width:900px;}
+.modal-close{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;z-index:5;}
+.modal-close:hover{background:rgba(244,63,94,.2);border-color:var(--danger);}
+.modal-body{padding:32px;}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:420px;max-width:92vw;background:var(--panel-solid);
+  border-left:1px solid var(--border-strong);z-index:101;transform:translateX(100%);transition:transform .22s ease;
+  display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.5);
+}
+.drawer.open{transform:translateX(0);}
+.drawer-head{padding:20px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 22px;}
+.drawer-foot{padding:20px 22px;border-top:1px solid var(--border);}
+.toast-stack{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:10px;max-width:340px;}
+.toast{
+  padding:14px 18px;border-radius:12px;background:var(--panel-solid);border:1px solid var(--border-strong);
+  box-shadow:0 10px 30px rgba(0,0,0,.4);font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:10px;
+  animation:toastIn .25s ease;
+}
+.toast.success{border-color:var(--success);}
+.toast.error{border-color:var(--danger);}
+.toast.warn{border-color:var(--warning);}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto;}
+.tab-btn{padding:12px 18px;font-weight:700;font-size:.85rem;color:var(--text-faint);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;}
+.tab-btn.active{color:#fff;border-color:var(--accent);}
+
+/* Devmode gear */
+.dev-gear{
+  width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;box-shadow:0 0 16px rgba(245,158,11,.5);
+}
+
+/* Admin table */
+.admin-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.admin-table th{text-align:left;padding:10px 12px;color:var(--text-faint);text-transform:uppercase;font-size:.7rem;letter-spacing:.05em;border-bottom:1px solid var(--border);}
+.admin-table td{padding:12px;border-bottom:1px solid rgba(168,85,247,.12);vertical-align:middle;}
+.admin-table tr:hover td{background:rgba(168,85,247,.05);}
+.thumb-sm{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#1c0f38;}
+.status-dot{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;}
+.status-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;}
+.status-dot.active{color:var(--success);}
+.status-dot.inactive{color:var(--text-faint);}
+.admin-grid{display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:start;}
+@media (max-width:820px){.admin-grid{grid-template-columns:1fr;}}
+.admin-side{display:flex;flex-direction:column;gap:6px;}
+.admin-side button{
+  text-align:left;padding:12px 16px;border-radius:10px;background:transparent;border:1px solid transparent;
+  color:var(--text-dim);font-weight:600;cursor:pointer;font-size:.9rem;
+}
+.admin-side button.active{background:rgba(168,85,247,.16);border-color:var(--border);color:#fff;}
+.admin-side button:hover{color:#fff;}
+.stat-card{padding:20px;border-radius:14px;text-align:left;}
+.stat-card .num{font-family:var(--font-display);font-size:1.8rem;font-weight:800;}
+.stat-card .lbl{font-size:.75rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
+.kv-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--border);font-size:.88rem;}
+.kv-row span:first-child{color:var(--text-faint);}
+.code-box{
+  background:#04030c;border:1px solid var(--border);border-radius:10px;padding:14px;font-family:monospace;
+  font-size:.8rem;color:var(--accent-2);word-break:break-all;position:relative;
+}
+.copy-btn{position:absolute;top:8px;right:8px;background:rgba(168,85,247,.2);border:1px solid var(--border);border-radius:6px;
+  padding:4px 9px;font-size:.7rem;cursor:pointer;color:#fff;}
+.switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch .slider{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:999px;cursor:pointer;transition:.2s;border:1px solid var(--border);}
+.switch .slider::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;}
+.switch input:checked + .slider{background:var(--accent);}
+.switch input:checked + .slider::before{transform:translateX(20px);}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;}
+.upload-box{
+  border:1.5px dashed var(--border);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:var(--text-faint);
+  font-size:.85rem;transition:all .15s ease;
+}
+.upload-box:hover{border-color:var(--border-strong);background:rgba(168,85,247,.06);}
+.gallery-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.gallery-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.download-box{
+  border:1px solid var(--success);background:rgba(168,85,247,.1);border-radius:12px;padding:18px;margin-top:14px;
+}
+.license-key{font-family:monospace;font-size:1rem;background:#04030c;padding:10px 14px;border-radius:8px;letter-spacing:.05em;display:inline-block;color:#fff;}
+
+@media(max-width:640px){
+  .modal-body{padding:22px;}
+  .hero{padding:60px 18px 44px;}
+  .stat-strip{gap:26px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================= BACKDROP ============================= -->
+<div id="nebula-canvas"></div>
+<div class="nebula-blob b1"></div>
+<div class="nebula-blob b2"></div>
+<div class="nebula-blob b3"></div>
+<div class="seam-ring"></div>
+<div class="shooting-star s1"></div>
+<div class="shooting-star s2"></div>
+<div class="shooting-star s3"></div>
+<canvas id="star-canvas" style="position:fixed;inset:0;z-index:-2;pointer-events:none;"></canvas>
+
+<!-- ============================= HEADER ============================= -->
+<header class="site-header">
+  <div class="announce-bar hidden" id="announce-bar"></div>
+  <div class="nav-inner wrap">
+    <div class="brand" onclick="YS.nav('home')">
+      <img id="brand-logo" src="YOLO.ico" alt="logo">
+      <div>
+        <div class="name" id="brand-name">YOLO <span>SCRIPTS</span></div>
+        <div class="tagline" id="brand-tagline">Premium Digital Products</div>
+      </div>
+    </div>
+    <nav class="main-nav" id="main-nav">
+      <a href="#/home" data-route="home">Home</a>
+      <a href="#/shop" data-route="shop">Shop</a>
+      <a href="#/purchases" data-route="purchases">My Purchases</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" title="Wishlist" onclick="YS.openWishlist()">♥<span class="cart-badge hidden" id="wish-badge">0</span></button>
+      <button class="icon-btn" title="Cart" onclick="YS.openCart()">🛒<span class="cart-badge hidden" id="cart-badge">0</span></button>
+      <div id="dev-gear-slot"></div>
+      <div id="auth-slot"></div>
+      <button class="mobile-toggle" onclick="YS.toggleMobileNav()">☰</button>
+    </div>
+  </div>
+  <div id="mobile-nav" class="hidden" style="padding:10px 24px 18px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border);">
+    <a href="#/home">Home</a><a href="#/shop">Shop</a><a href="#/purchases">My Purchases</a>
+  </div>
+</header>
+
+<!-- ============================= MAIN APP ============================= -->
+<main id="app"></main>
+
+<!-- ============================= FOOTER ============================= -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:14px;">
+          <img src="YOLO.ico" alt="logo" style="width:36px;height:36px;">
+          <div class="name" style="font-size:1.05rem;">YOLO <span>SCRIPTS</span></div>
+        </div>
+        <p style="max-width:280px;" id="footer-blurb">Premium digital scripts, tools and guides — built for creators who play to win.</p>
+        <div id="footer-social" style="display:flex;gap:10px;margin-top:14px;"></div>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <a href="#/shop">All Products</a>
+        <a href="#/shop?featured=1">Featured</a>
+        <a href="#/purchases">My Purchases</a>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <a id="footer-discord-link" href="#" target="_blank" rel="noopener">Join Discord</a>
+        <a href="#" onclick="YS.toast('Support: reach us on Discord.','warn');return false;">Support</a>
+      </div>
+      <div>
+        <h4>Store</h4>
+        <p>© <span id="footer-year"></span> YoloScripts</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>🏀 YoloScripts — premium digital products</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<!-- ============================= GENERIC MODAL HOST ============================= -->
+<div class="overlay" id="modal-overlay" onclick="if(event.target===this)YS.closeModal()">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<!-- ============================= CART DRAWER ============================= -->
+<div class="overlay" id="drawer-overlay" style="justify-content:flex-end;padding:0;" onclick="if(event.target===this)YS.closeDrawer()">
+  <div class="drawer" id="drawer-box"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer id="emailjs-sdk"></script>
+<script>
+/* ================================================================
+   YOLO SCRIPTS — storefront + devmode application
+   All data persists in this browser via localStorage unless a
+   companion fulfillment server is configured in Devmode → Settings.
+================================================================ */
+(function(){
+"use strict";
+
+// Devmode is permanently locked to this Discord account. To transfer
+// ownership, change this one constant and redeploy — there is no
+// in-app "claim" flow, by design, so access can never drift.
+const OWNER_DISCORD_ID = '1199408578717560942';
+
+const LS = {
+  settings:'ys_settings', products:'ys_products', orders:'ys_orders',
+  wishlist:'ys_wishlist', cart:'ys_cart', licensePools:'ys_license_pools',
+  subscribers:'ys_subscribers'
+};
+const SS_SESSION = 'ys_session';
+
+function loadJSON(key, fallback){
+  try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+  catch(e){ return fallback; }
+}
+function saveJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function uid(prefix){ return (prefix||'id')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function slugify(s){ return (s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || uid('p'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n, cur){ try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:cur||'USD'}).format(Number(n||0)); }catch(e){ return '$'+Number(n||0).toFixed(2); } }
+function fmtDate(ts){ try{ return new Date(ts).toLocaleString(); }catch(e){ return ''; } }
+
+/* ============================= DEFAULT DATA ============================= */
+const DEFAULT_SETTINGS = {
+  siteName:'YoloScripts',
+  brandWord:'SCRIPTS',
+  brandFirstWord:'YOLO',
+  tagline:'Premium Digital Products',
+  footerBlurb:'Premium digital scripts, tools and guides — built for creators who play to win.',
+  heroTitle:'Yolo Scripts\nBuilt to {accent}Dominate{/accent}',
+  heroSubtitle:'Hand-built scripts, tools and guides — instant delivery, secure checkout, zero hassle.',
+  announcement:'',
+  announcementEnabled:false,
+  logoDataUrl:'',
+  accentColor:'#a855f7',
+  accentColor2:'#c084fc',
+  bgIntensity:1,
+  currency:'USD',
+  aboutEnabled:false,
+  aboutTitle:'About YoloScripts',
+  aboutBody:'We build premium digital products — scripts, tools and guides — made for creators who want to move fast and stand out.',
+  testimonialsEnabled:false,
+  testimonials:[],
+  newsletterEnabled:false,
+  newsletterTitle:'Stay in the loop',
+  newsletterSubtitle:'Get notified when new products drop. No spam.',
+  discordInvite:'https://discord.gg/your-invite',
+  // Public OAuth2 Client ID from Discord Developer Portal.
+  // Client Secret must NEVER go here — only Client ID is used for the
+  // browser implicit login flow (response_type=token).
+  discordClientId:'1535016417940869140',
+  discordGuildId:'',
+  stripePublishableKey:'',
+  stripeSecretKey:'',
+  socialTwitter:'',
+  socialWebsite:'',
+  emailjsServiceId:'',
+  emailjsTemplateId:'',
+  emailjsPublicKey:'',
+  fulfillmentWebhook:'',
+  checkoutApiUrl:'',
+  adminApiKey:'',
+  reduceMotion:false,
+  setupLocked:false,
+  manualLoginEnabled:true
+};
+
+// Empty by default — the store owner adds every product through Devmode.
+const DEMO_PRODUCTS = [];
+
+/* ============================= STATE ============================= */
+const state = {
+  settings: Object.assign({}, DEFAULT_SETTINGS, loadJSON(LS.settings, null) || {}),
+  products: loadJSON(LS.products, null) || DEMO_PRODUCTS,
+  orders: loadJSON(LS.orders, []),
+  wishlist: loadJSON(LS.wishlist, []),
+  cart: loadJSON(LS.cart, []),
+  licensePools: loadJSON(LS.licensePools, {}),
+  subscribers: loadJSON(LS.subscribers, []),
+  session: (function(){ try{ return JSON.parse(sessionStorage.getItem(SS_SESSION)||'null'); }catch(e){ return null; } })(),
+  devUnlocked:false,
+  route:'home',
+  filters:{category:'all', search:'', featured:false}
+};
+if(!loadJSON(LS.settings,null)) saveJSON(LS.settings, state.settings);
+if(!loadJSON(LS.products,null)) saveJSON(LS.products, state.products);
+
+// One-time migration: early versions of this file defaulted the secondary
+// accent color to cyan (#06d6a0) before the theme was made all-purple. If a
+// browser saved that old default, correct it automatically rather than
+// requiring a manual localStorage clear or Devmode edit.
+if(state.settings.accentColor2 === '#06d6a0'){
+  state.settings.accentColor2 = DEFAULT_SETTINGS.accentColor2;
+  saveJSON(LS.settings, state.settings);
+}
+// Same idea: an earlier default hero title said "Digital Products" before
+// being changed to "Yolo Scripts" — auto-correct browsers stuck on it,
+// but only if it's still the untouched original default (never overwrite
+// a hero title the owner deliberately customized in Devmode).
+if(state.settings.heroTitle === 'Digital Products\nBuilt to {accent}Dominate{/accent}'){
+  state.settings.heroTitle = DEFAULT_SETTINGS.heroTitle;
+  saveJSON(LS.settings, state.settings);
+}
+// Bake in the Discord Client ID for browsers that already saved an empty
+// settings blob before this value was shipped in DEFAULT_SETTINGS.
+if(!state.settings.discordClientId && DEFAULT_SETTINGS.discordClientId){
+  state.settings.discordClientId = DEFAULT_SETTINGS.discordClientId;
+  saveJSON(LS.settings, state.settings);
+}
+
+function persist(){
+  saveJSON(LS.settings, state.settings);
+  saveJSON(LS.products, state.products);
+  saveJSON(LS.orders, state.orders);
+  saveJSON(LS.wishlist, state.wishlist);
+  saveJSON(LS.cart, state.cart);
+  saveJSON(LS.licensePools, state.licensePools);
+  saveJSON(LS.subscribers, state.subscribers);
+}
+function saveSession(){ sessionStorage.setItem(SS_SESSION, JSON.stringify(state.session)); }
+
+/* ============================= TOASTS ============================= */
+function toast(msg, type){
+  const stack = document.getElementById('toast-stack');
+  const t = document.createElement('div');
+  t.className = 'toast '+(type||'');
+  const icon = type==='success'?'✅':type==='error'?'⚠️':type==='warn'?'⚡':'✨';
+  t.innerHTML = `<span>${icon}</span><span>${esc(msg)}</span>`;
+  stack.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(30px)'; t.style.transition='all .25s ease'; setTimeout(()=>t.remove(),260); }, 3600);
+}
+
+/* ============================= BACKGROUND STARFIELD ============================= */
+(function starfield(){
+  const canvas = document.getElementById('star-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize(){
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const count = Math.min(220, Math.floor((window.innerWidth*window.innerHeight)/9000));
+    stars = Array.from({length:count}, ()=>({
+      x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+      r:Math.random()*1.4+.3, phase:Math.random()*Math.PI*2, speed:Math.random()*.015+.005
+    }));
+  }
+  let raf;
+  function tick(t){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(const s of stars){
+      const a = 0.35 + 0.65*Math.abs(Math.sin(s.phase + t*s.speed*0.06));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(216,180,254,${a.toFixed(2)})`;
+      ctx.fill();
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  if(!state.settings.reduceMotion){ raf = requestAnimationFrame(tick); }
+  else { tick(0); }
+})();
+
+/* ============================= THEME APPLY ============================= */
+function applyTheme(){
+  document.documentElement.style.setProperty('--accent', state.settings.accentColor || '#a855f7');
+  document.documentElement.style.setProperty('--accent-2', state.settings.accentColor2 || '#c084fc');
+  document.querySelectorAll('.nebula-blob').forEach(el=>{ el.style.opacity = 0.35 * (state.settings.bgIntensity!=null?state.settings.bgIntensity:1); });
+  document.title = (state.settings.siteName||'YoloScripts') + ' — ' + (state.settings.tagline||'');
+  document.getElementById('brand-logo').src = state.settings.logoDataUrl || 'YOLO.ico';
+  document.getElementById('brand-name').innerHTML = esc(state.settings.brandFirstWord||'YOLO')+' <span>'+esc(state.settings.brandWord||'SCRIPTS')+'</span>';
+  document.getElementById('brand-tagline').textContent = state.settings.tagline||'';
+  document.getElementById('footer-blurb').textContent = state.settings.footerBlurb||'';
+  document.getElementById('footer-discord-link').href = state.settings.discordInvite || '#';
+  document.getElementById('footer-year').textContent = new Date().getFullYear();
+  const socialWrap = document.getElementById('footer-social');
+  const socials = [];
+  if(state.settings.socialWebsite) socials.push(`<a class="social-link" href="${esc(state.settings.socialWebsite)}" target="_blank" rel="noopener" title="Website">🌐</a>`);
+  if(state.settings.socialTwitter) socials.push(`<a class="social-link" href="${esc(state.settings.socialTwitter)}" target="_blank" rel="noopener" title="X / Twitter">𝕏</a>`);
+  socialWrap.innerHTML = socials.join('');
+  const bar = document.getElementById('announce-bar');
+  if(state.settings.announcementEnabled && state.settings.announcement){
+    bar.classList.remove('hidden');
+    bar.innerHTML = esc(state.settings.announcement)+' <button onclick="YS.dismissAnnounce()">✕</button>';
+  } else bar.classList.add('hidden');
+}
+window.__ysDismissAnnounce = false;
+
+/* ============================= DISCORD OAUTH (implicit flow) ============================= */
+const Discord = {
+  redirectUri(){ return window.location.origin + window.location.pathname; },
+  authUrl(){
+    const cid = state.settings.discordClientId;
+    const params = new URLSearchParams({
+      client_id: cid || '',
+      redirect_uri: this.redirectUri(),
+      response_type: 'token',
+      scope: 'identify email'
+    });
+    return 'https://discord.com/oauth2/authorize?'+params.toString();
+  },
+  login(){
+    if(!state.settings.discordClientId){
+      toast('Discord Client ID is not configured yet. Devmode owners: set it in Settings.', 'error');
+      return;
+    }
+    window.location.href = this.authUrl();
+  },
+  logout(){
+    state.session = null; saveSession(); renderAuthSlot(); renderDevGear(); YS.renderRoute();
+    toast('Logged out.', 'success');
+  },
+  async handleRedirect(){
+    if(!window.location.hash || window.location.hash.indexOf('access_token') === -1) return;
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const token = hash.get('access_token');
+    if(!token) return;
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    try{
+      const res = await fetch('https://discord.com/api/users/@me', { headers:{ Authorization:'Bearer '+token } });
+      if(!res.ok) throw new Error('discord api error '+res.status);
+      const user = await res.json();
+      const avatar = user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+        : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.discriminator||'0',10)||0)%5}.png`;
+      state.session = { accessToken:token, discordUser:{ id:user.id, username:user.username, discriminator:user.discriminator, email:user.email, avatar } };
+      saveSession();
+      toast('Logged in as '+user.username, 'success');
+      renderAuthSlot(); renderDevGear();
+      if(state.route==='devmode') renderRoute();
+    }catch(err){
+      console.error(err);
+      toast('Discord login failed. Check Client ID / Redirect URI in Devmode settings.', 'error');
+    }
+  }
+};
+window.Discord = Discord; // inline onclick="Discord.login()" handlers run in global scope
+
+function isOwner(){
+  return !!(state.session && state.session.discordUser && state.session.discordUser.id === OWNER_DISCORD_ID);
+}
+
+/* ============================= AUTH / DEV GEAR UI ============================= */
+function renderAuthSlot(){
+  const slot = document.getElementById('auth-slot');
+  if(state.session && state.session.discordUser){
+    const u = state.session.discordUser;
+    slot.innerHTML = `<div class="user-chip" onclick="YS.openAccountMenu()">
+      <img src="${u.avatar}" alt="">
+      <span>${esc(u.username)}</span>
+    </div>`;
+  } else {
+    slot.innerHTML = `<button class="btn sm" onclick="Discord.login()">Login with Discord</button>`;
+  }
+}
+function renderDevGear(){
+  const slot = document.getElementById('dev-gear-slot');
+  if(isOwner()){
+    slot.innerHTML = `<div class="dev-gear" title="Devmode" onclick="YS.nav('devmode')">⚙️</div>`;
+  } else slot.innerHTML = '';
+}
+
+/* ============================= ROUTER ============================= */
+function parseHash(){
+  const raw = (window.location.hash || '#/home').slice(2);
+  const [path, qs] = raw.split('?');
+  const parts = path.split('/').filter(Boolean);
+  return { parts, query: new URLSearchParams(qs||'') };
+}
+function navTo(route, opts){
+  opts = opts||'';
+  window.location.hash = '#/'+route+(opts?('?'+opts):'');
+}
+function renderRoute(){
+  const { parts, query } = parseHash();
+  const route = parts[0] || 'home';
+  state.route = route;
+  document.querySelectorAll('.main-nav a').forEach(a=>a.classList.toggle('active', a.dataset.route===route));
+  const app = document.getElementById('app');
+  if(route === 'home') app.innerHTML = viewHome();
+  else if(route === 'shop'){
+    state.filters.featured = query.get('featured')==='1';
+    app.innerHTML = viewShop();
+    wireShopFilters();
+  }
+  else if(route === 'product'){ app.innerHTML = viewProductPage(parts[1]); }
+  else if(route === 'purchases'){ app.innerHTML = viewPurchases(); }
+  else if(route === 'devmode'){
+    if(!isOwner()){ app.innerHTML = viewDevLocked(); }
+    else app.innerHTML = viewDevmode(query.get('tab')||'overview');
+  }
+  else app.innerHTML = viewHome();
+  window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+  document.getElementById('mobile-nav').classList.add('hidden');
+}
+window.addEventListener('hashchange', renderRoute);
+
+/* ============================= HOME VIEW ============================= */
+function viewHome(){
+  const heroLines = (state.settings.heroTitle||'').split('\n');
+  const heroHtml = heroLines.map(l=>l.replace('{accent}','<span class="accent">').replace('{/accent}','</span>')).join('<br>');
+  const all = state.products.filter(p=>p.active!==false);
+  const featured = all.filter(p=>p.featured).slice(0,6);
+  const showEmpty = all.length===0;
+  return `
+  <section class="hero">
+    <div class="wrap">
+      <div class="badge-row">
+        <span class="pill">🏀 YoloScripts</span>
+        <span class="pill">🔒 Secure Checkout</span>
+        <span class="pill">⚡ Instant Delivery</span>
+      </div>
+      <h1 class="glow-text">${heroHtml}</h1>
+      <p class="sub">${esc(state.settings.heroSubtitle||'')}</p>
+      <div class="cta-row">
+        <button class="btn" onclick="YS.nav('shop')">🛍️ Browse Products</button>
+      </div>
+      ${!showEmpty ? `
+      <div class="stat-strip">
+        <div class="stat"><div class="num">${all.length}+</div><div class="lbl">Products</div></div>
+        <div class="stat"><div class="num">${state.orders.filter(o=>o.status==='fulfilled').length}</div><div class="lbl">Orders Fulfilled</div></div>
+        <div class="stat"><div class="num">⭐⭐⭐⭐⭐</div><div class="lbl">Buyer Rated</div></div>
+      </div>` : ''}
+    </div>
+  </section>
+
+  ${showEmpty ? `
+  <section class="wrap" style="padding-top:0;">
+    <div class="card" style="padding:70px 30px;text-align:center;">
+      <div style="font-size:2.8rem;margin-bottom:14px;">🏀</div>
+      <h2 style="margin-bottom:10px;">Coming Soon</h2>
+      <p style="color:var(--text-faint);max-width:420px;margin:0 auto;">New digital products are on the way — check back soon!</p>
+    </div>
+  </section>` : `
+  ${featured.length ? `
+  <section class="wrap">
+    <div class="section-head">
+      <div><h2>🔥 Featured Drops</h2><p>Hand-picked products our customers love.</p></div>
+      <button class="btn ghost sm" onclick="YS.nav('shop')">View All →</button>
+    </div>
+    <div class="product-grid">${featured.map(productCard).join('')}</div>
+  </section>` : ''}
+
+  <section class="wrap">
+    <div class="section-head">
+      <div><h2>🆕 Latest Products</h2><p>Fresh from the workshop.</p></div>
+    </div>
+    <div class="product-grid">${all.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,6).map(productCard).join('')}</div>
+  </section>
+  `}
+
+  ${state.settings.aboutEnabled ? `
+  <section class="wrap">
+    <div class="card" style="padding:44px;text-align:center;">
+      <h2 style="margin-bottom:14px;">${esc(state.settings.aboutTitle)}</h2>
+      <p style="color:var(--text-dim);max-width:640px;margin:0 auto;white-space:pre-line;">${esc(state.settings.aboutBody)}</p>
+    </div>
+  </section>` : ''}
+
+  ${state.settings.testimonialsEnabled && (state.settings.testimonials||[]).filter(t=>t.quote).length ? `
+  <section class="wrap">
+    <div class="section-head"><div><h2>💬 What Buyers Say</h2></div></div>
+    <div class="product-grid">
+      ${state.settings.testimonials.filter(t=>t.quote).map(t=>`
+        <div class="card" style="padding:22px;">
+          <p style="color:var(--text-dim);font-style:italic;margin-bottom:14px;">"${esc(t.quote)}"</p>
+          <p style="font-weight:700;color:var(--accent-2);">— ${esc(t.name||'Verified Buyer')}</p>
+        </div>`).join('')}
+    </div>
+  </section>` : ''}
+
+  ${state.settings.newsletterEnabled ? `
+  <section class="wrap">
+    <div class="card" style="padding:44px;text-align:center;">
+      <h2 style="margin-bottom:8px;">${esc(state.settings.newsletterTitle)}</h2>
+      <p style="color:var(--text-faint);margin-bottom:22px;">${esc(state.settings.newsletterSubtitle)}</p>
+      <form onsubmit="return YS.subscribeNewsletter(event)" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:420px;margin:0 auto;">
+        <input type="email" name="email" required placeholder="you@example.com" style="flex:1;min-width:220px;padding:12px 16px;border-radius:999px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);">
+        <button type="submit" class="btn sm">Subscribe</button>
+      </form>
+    </div>
+  </section>` : ''}
+  `;
+}
+function subscribeNewsletter(ev){
+  ev.preventDefault();
+  const email = new FormData(ev.target).get('email');
+  if(!email) return false;
+  if(state.subscribers.some(s=>s.email.toLowerCase()===email.toLowerCase())){
+    toast('You are already subscribed!', 'success');
+  } else {
+    state.subscribers.push({email, at:Date.now()});
+    persist();
+    toast('Subscribed! 🏀', 'success');
+  }
+  ev.target.reset();
+  return false;
+}
+
+/* ============================= SHOP VIEW ============================= */
+function viewShop(){
+  const cats = ['all', ...new Set(state.products.map(p=>p.category).filter(Boolean))];
+  return `
+  <section class="wrap" style="padding-top:40px;">
+    <div class="section-head">
+      <div><h2>🛍️ Shop All Products</h2><p>Digital scripts, tools &amp; guides — instant delivery.</p></div>
+    </div>
+    <div class="filter-bar">
+      <div class="search-box"><input type="text" id="shop-search" placeholder="Search products..." value="${esc(state.filters.search)}"></div>
+      ${cats.map(c=>`<button class="filter-chip ${state.filters.category===c?'active':''}" data-cat="${esc(c)}">${c==='all'?'All':esc(c)}</button>`).join('')}
+      <button class="filter-chip ${state.filters.featured?'active':''}" id="shop-featured-chip">⭐ Featured</button>
+    </div>
+    <div class="product-grid" id="shop-grid"></div>
+  </section>`;
+}
+function filteredProducts(){
+  return state.products.filter(p=>{
+    if(p.active===false) return false;
+    if(state.filters.category!=='all' && p.category!==state.filters.category) return false;
+    if(state.filters.featured && !p.featured) return false;
+    if(state.filters.search){
+      const s = state.filters.search.toLowerCase();
+      if(!(p.name.toLowerCase().includes(s) || (p.description||'').toLowerCase().includes(s) || (p.tags||[]).join(' ').toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+}
+function wireShopFilters(){
+  const grid = document.getElementById('shop-grid');
+  function render(){ grid.innerHTML = filteredProducts().map(productCard).join('') || emptyState('No products match your filters.'); }
+  render();
+  document.querySelectorAll('.filter-chip[data-cat]').forEach(btn=>{
+    btn.onclick = ()=>{ state.filters.category = btn.dataset.cat; document.querySelectorAll('.filter-chip[data-cat]').forEach(b=>b.classList.toggle('active', b===btn)); render(); };
+  });
+  const featBtn = document.getElementById('shop-featured-chip');
+  featBtn.onclick = ()=>{ state.filters.featured = !state.filters.featured; featBtn.classList.toggle('active', state.filters.featured); render(); };
+  const search = document.getElementById('shop-search');
+  let debounce;
+  search.oninput = ()=>{ clearTimeout(debounce); debounce = setTimeout(()=>{ state.filters.search = search.value; render(); }, 150); };
+}
+function emptyState(msg){
+  return `<div class="empty-state" style="grid-column:1/-1;"><div class="emoji">🏀</div><p>${esc(msg)}</p></div>`;
+}
+
+/* ============================= PRODUCT CARD / MODAL ============================= */
+function productCard(p){
+  const inWishlist = state.wishlist.includes(p.id);
+  const thumb = p.image ? `<img src="${p.image}" alt="${esc(p.name)}">` : '🏀';
+  return `
+  <div class="card product-card" onclick="YS.openProduct('${p.slug}')">
+    <div class="thumb">
+      ${thumb}
+      <div class="badges">
+        ${p.featured?'<span class="badge featured">Featured</span>':''}
+        ${p.compareAtPrice>0 ? '<span class="badge sale">Sale</span>':''}
+        ${(Date.now()-p.createdAt) < 86400000*10 ? '<span class="badge new">New</span>':''}
+      </div>
+      <div class="wish-toggle ${inWishlist?'active':''}" onclick="event.stopPropagation();YS.toggleWishlist('${p.id}')">♥</div>
+    </div>
+    <div class="body">
+      <div class="cat">${esc(p.category||'Script')}</div>
+      <h3>${esc(p.name)}</h3>
+      <div class="desc">${esc(p.shortDescription||p.description||'')}</div>
+      <div class="price-row">
+        <div>${p.compareAtPrice>0?`<span class="price compare">${fmtMoney(p.compareAtPrice, state.settings.currency)}</span>`:''}<span class="price">${fmtMoney(p.price, state.settings.currency)}</span></div>
+        <button class="btn sm" onclick="event.stopPropagation();YS.buyNow('${p.id}')">Buy Now</button>
+      </div>
+    </div>
+  </div>`;
+}
+function viewProductPage(slug){
+  const p = state.products.find(x=>x.slug===slug);
+  if(!p) return `<section class="wrap" style="padding-top:60px;">${emptyState('Product not found.')}</section>`;
+  return `<section class="wrap" style="padding-top:40px;">${productDetailMarkup(p)}</section>`;
+}
+function productDetailMarkup(p){
+  const inWishlist = state.wishlist.includes(p.id);
+  const gallery = [p.image, ...(p.gallery||[])].filter(Boolean);
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;" class="pd-grid">
+    <div>
+      <div class="card" style="height:340px;display:flex;align-items:center;justify-content:center;font-size:4rem;overflow:hidden;">
+        ${gallery[0]?`<img src="${gallery[0]}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}
+      </div>
+      ${gallery.length>1?`<div class="gallery-thumbs">${gallery.slice(1).map(g=>`<img src="${g}">`).join('')}</div>`:''}
+    </div>
+    <div>
+      <div class="cat">${esc(p.category||'Script')}</div>
+      <h1 style="font-size:1.9rem;margin:8px 0 14px;">${esc(p.name)}</h1>
+      <div style="margin-bottom:18px;">
+        ${p.compareAtPrice>0?`<span class="price compare">${fmtMoney(p.compareAtPrice,state.settings.currency)}</span>`:''}
+        <span class="price" style="font-size:1.7rem;">${fmtMoney(p.price,state.settings.currency)}</span>
+      </div>
+      <p style="color:var(--text-dim);margin-bottom:22px;white-space:pre-line;">${esc(p.description||'')}</p>
+      ${p.discordRoleName?`<div class="pill" style="margin-bottom:18px;">🎖️ Grants role: ${esc(p.discordRoleName)}</div>`:''}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn" onclick="YS.buyNow('${p.id}')">💳 Buy Now — ${fmtMoney(p.price,state.settings.currency)}</button>
+        <button class="btn ghost" onclick="YS.addToCart('${p.id}')">🛒 Add to Cart</button>
+        <button class="icon-btn ${inWishlist?'wish-toggle active':''}" style="${inWishlist?'color:#f43f5e;border-color:#f43f5e;':''}" onclick="YS.toggleWishlist('${p.id}')">♥</button>
+      </div>
+      ${!p.stripeLink ? `<p class="hint" style="margin-top:14px;color:var(--warning);">⚠️ Payment link not configured yet for this product.</p>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ============================= MODAL / DRAWER PLUMBING ============================= */
+function openModal(html, opts){
+  opts = opts || {};
+  const overlay = document.getElementById('modal-overlay');
+  const box = document.getElementById('modal-box');
+  box.className = 'modal'+(opts.wide?' wide':'');
+  box.innerHTML = `<div class="modal-close" onclick="YS.closeModal()">✕</div><div class="modal-body">${html}</div>`;
+  overlay.classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+function openDrawer(html){
+  document.getElementById('drawer-box').innerHTML = html;
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+function closeDrawer(){ document.getElementById('drawer-overlay').classList.remove('open'); }
+
+/* ============================= CART / WISHLIST ============================= */
+function updateBadges(){
+  const wb = document.getElementById('wish-badge'), cb = document.getElementById('cart-badge');
+  wb.textContent = state.wishlist.length; wb.classList.toggle('hidden', state.wishlist.length===0);
+  const cartCount = state.cart.reduce((a,c)=>a+c.qty,0);
+  cb.textContent = cartCount; cb.classList.toggle('hidden', cartCount===0);
+}
+function toggleWishlist(pid){
+  const i = state.wishlist.indexOf(pid);
+  if(i>-1) state.wishlist.splice(i,1); else state.wishlist.push(pid);
+  persist(); updateBadges();
+  if(state.route==='shop') renderRoute(); else if(document.getElementById('shop-grid')) wireShopFilters();
+  toast(i>-1?'Removed from wishlist':'Added to wishlist','success');
+}
+function addToCart(pid){
+  const existing = state.cart.find(c=>c.productId===pid);
+  if(existing) existing.qty++; else state.cart.push({productId:pid, qty:1});
+  persist(); updateBadges(); toast('Added to cart','success');
+}
+function removeFromCart(pid){ state.cart = state.cart.filter(c=>c.productId!==pid); persist(); updateBadges(); openCart(); }
+function openWishlist(){
+  const items = state.wishlist.map(id=>state.products.find(p=>p.id===id)).filter(Boolean);
+  openDrawer(`
+    <div class="drawer-head"><h3>Wishlist</h3><div class="modal-close" onclick="YS.closeDrawer()">✕</div></div>
+    <div class="drawer-body">
+      ${items.length? items.map(p=>`
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;">
+          <div style="width:50px;height:50px;border-radius:8px;background:#1c0f38;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${p.image?`<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}</div>
+          <div style="flex:1;"><div style="font-weight:700;">${esc(p.name)}</div><div class="price">${fmtMoney(p.price,state.settings.currency)}</div></div>
+          <button class="btn sm ghost" onclick="YS.toggleWishlist('${p.id}');YS.openWishlist()">Remove</button>
+        </div>`).join('') : `<p style="color:var(--text-faint);">Your wishlist is empty.</p>`}
+    </div>`);
+}
+function cartTotal(){
+  return state.cart.reduce((sum,c)=>{ const p = state.products.find(x=>x.id===c.productId); return sum + (p?p.price*c.qty:0); }, 0);
+}
+function openCart(){
+  const items = state.cart.map(c=>({...c, product: state.products.find(p=>p.id===c.productId)})).filter(c=>c.product);
+  const hasServer = !!state.settings.checkoutApiUrl;
+  openDrawer(`
+    <div class="drawer-head"><h3>Your Cart</h3><div class="modal-close" onclick="YS.closeDrawer()">✕</div></div>
+    <div class="drawer-body">
+      ${items.length? items.map(c=>`
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;">
+          <div style="width:50px;height:50px;border-radius:8px;background:#1c0f38;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${c.product.image?`<img src="${c.product.image}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}</div>
+          <div style="flex:1;"><div style="font-weight:700;">${esc(c.product.name)}</div><div class="price">${fmtMoney(c.product.price,state.settings.currency)} × ${c.qty}</div></div>
+          <button class="btn sm ghost" onclick="YS.removeFromCart('${c.productId}')">✕</button>
+        </div>`).join('') : `<p style="color:var(--text-faint);">Your cart is empty.</p>`}
+      ${!hasServer && items.length ? `<p class="hint" style="margin-top:14px;">No checkout server connected — check out items individually below using each item's own payment link.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+        ${items.map(c=>`<button class="btn sm ghost block" onclick="YS.buyNow('${c.productId}')">Buy ${esc(c.product.name)} — ${fmtMoney(c.product.price,state.settings.currency)}</button>`).join('')}
+        </div>` : ''}
+    </div>
+    <div class="drawer-foot">
+      <div class="kv-row" style="font-size:1rem;"><span>Total</span><span style="font-weight:800;">${fmtMoney(cartTotal(),state.settings.currency)}</span></div>
+      <button class="btn block" style="margin-top:12px;" ${items.length?'':'disabled'} onclick="YS.checkout()">${hasServer?'Checkout with Stripe':'Checkout'}</button>
+    </div>`);
+}
+function requireLoginToBuy(){
+  toast('Please login with Discord to purchase — this is how your license and roles get attached to your account.', 'warn');
+  Discord.login();
+}
+async function checkout(){
+  const items = state.cart.map(c=>({...c, product: state.products.find(p=>p.id===c.productId)})).filter(c=>c.product);
+  if(!items.length) return;
+  if(!(state.session && state.session.discordUser)){ requireLoginToBuy(); return; }
+  if(!state.settings.checkoutApiUrl){
+    toast('Connect a checkout server in Devmode to enable one-click cart checkout — or buy items individually.', 'warn');
+    return;
+  }
+  closeDrawer();
+  try{
+    toast('Creating secure checkout session...', '');
+    const res = await fetch(state.settings.checkoutApiUrl.replace(/\/$/,'') + '/api/create-checkout-session', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        items: items.map(c=>({productId:c.productId, qty:c.qty})),
+        discordUser: state.session.discordUser,
+        successBase: window.location.origin + window.location.pathname
+      })
+    });
+    if(!res.ok) throw new Error('server responded '+res.status);
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else throw new Error('no checkout url returned');
+  }catch(err){
+    console.error(err);
+    toast('Checkout server unreachable. Try individual buy links instead.', 'error');
+  }
+}
+function buyNow(pid){
+  const p = state.products.find(x=>x.id===pid);
+  if(!p) return;
+  if(!(state.session && state.session.discordUser)){ requireLoginToBuy(); return; }
+  if(!p.stripeLink){
+    toast('This product has no payment link configured yet. Devmode owners can add one in Settings.', 'error');
+    return;
+  }
+  const order = { id:uid('ord'), productId:p.id, productName:p.name, discordUser:state.session.discordUser,
+    sessionId:null, status:'pending', createdAt:Date.now(), amount:p.price };
+  state.orders.push(order); persist();
+  const params = new URLSearchParams({ client_reference_id: state.session.discordUser.id });
+  if(state.session.discordUser.email) params.set('prefilled_email', state.session.discordUser.email);
+  const sep = p.stripeLink.includes('?') ? '&' : '?';
+  window.location.href = p.stripeLink + sep + params.toString();
+}
+
+/* ============================= PRODUCT MODAL OPEN ============================= */
+function openProduct(slug){
+  const p = state.products.find(x=>x.slug===slug);
+  if(!p){ toast('Product not found', 'error'); return; }
+  openModal(productDetailMarkup(p), {wide:true});
+}
+
+/* ============================= PURCHASES VIEW ============================= */
+function viewPurchases(){
+  if(!state.session || !state.session.discordUser){
+    return `<section class="wrap" style="padding-top:70px;text-align:center;">
+      <h2 style="margin-bottom:14px;">My Purchases</h2>
+      <p style="color:var(--text-faint);margin-bottom:24px;">Login with Discord to view your purchase history on this device.</p>
+      <button class="btn" onclick="Discord.login()">Login with Discord</button>
+    </section>`;
+  }
+  const mine = state.orders.filter(o=>o.discordUser && o.discordUser.id===state.session.discordUser.id).sort((a,b)=>b.createdAt-a.createdAt);
+  return `<section class="wrap" style="padding-top:50px;">
+    <div class="section-head"><div><h2>My Purchases</h2><p>Purchase history stored on this device. Connect a fulfillment server for cross-device history.</p></div></div>
+    ${mine.length ? `<div class="card" style="overflow-x:auto;"><table class="admin-table">
+      <thead><tr><th>Product</th><th>Status</th><th>Amount</th><th>Date</th><th>Role Access</th><th></th></tr></thead>
+      <tbody>${mine.map(o=>{
+        const p = state.products.find(x=>x.id===o.productId);
+        const expiry = o.roleExpiresAt ? (o.roleExpiresAt>Date.now() ? `Expires ${fmtDate(o.roleExpiresAt)}` : `<span style="color:var(--danger);">Expired</span>`) : (p&&p.discordRoleId?'Lifetime':'—');
+        return `<tr><td>${esc(o.productName)}</td><td><span class="status-dot ${o.status==='fulfilled'?'active':'inactive'}">${esc(o.status)}</span></td>
+        <td>${fmtMoney(o.amount,state.settings.currency)}</td><td>${fmtDate(o.createdAt)}</td><td>${expiry}</td>
+        <td>${p&&p.fileUrl && o.status==='fulfilled' ? `<a class="btn sm" href="${esc(p.fileUrl)}" target="_blank">Download</a>`:''}</td></tr>`;
+      }).join('')}</tbody></table></div>` : `<div class="card" style="padding:40px;text-align:center;color:var(--text-faint);">No purchases yet on this device.</div>`}
+  </section>`;
+}
+
+/* ============================= SUCCESS / FULFILLMENT ============================= */
+async function handleReturnFromStripe(){
+  const qp = new URLSearchParams(window.location.search);
+  if(qp.get('ys_success') === '1'){
+    const productSlug = qp.get('product');
+    const sessionId = qp.get('session_id') || null;
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+    showSuccessModal(productSlug, sessionId);
+    fulfill(sessionId, productSlug);
+  } else if(qp.get('ys_cancel') === '1'){
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+    toast('Checkout cancelled.', 'warn');
+  }
+}
+function showSuccessModal(productSlug, sessionId){
+  const p = state.products.find(x=>x.slug===productSlug);
+  openModal(`
+    <div style="text-align:center;">
+      <div style="font-size:3rem;margin-bottom:10px;">🎉</div>
+      <h2 class="glow-text" style="margin-bottom:10px;">Payment Successful!</h2>
+      <p style="color:var(--text-dim);margin-bottom:18px;">${p?`Thanks for grabbing <b>${esc(p.name)}</b>!`:'Thanks for your purchase!'} We're finalizing your order now.</p>
+      <div id="fulfill-status" class="card" style="padding:18px;text-align:left;">
+        <div style="display:flex;align-items:center;gap:10px;"><div class="spinner"></div><span>Verifying payment &amp; preparing your download...</span></div>
+      </div>
+      <a class="btn ghost" style="margin-top:18px;" href="${esc(state.settings.discordInvite||'#')}" target="_blank">💬 Join our Discord for support</a>
+    </div>`, {});
+}
+async function fulfill(sessionId, productSlug){
+  const statusBox = document.getElementById('fulfill-status');
+  const product = state.products.find(p=>p.slug===productSlug);
+  const discordUser = state.session ? state.session.discordUser : null;
+
+  if(state.settings.fulfillmentWebhook){
+    try{
+      const res = await fetch(state.settings.fulfillmentWebhook, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ sessionId, productSlug, discordUser })
+      });
+      const data = await res.json();
+      if(data && data.ok){
+        recordFulfilled(product, sessionId, discordUser);
+        if(statusBox) statusBox.innerHTML = renderFulfillSuccess(data.items || (product?[{productName:product.name, downloadUrl:data.downloadUrl||product.fileUrl}]:[]), data.roleGranted, data.emailSent);
+        return;
+      }
+      throw new Error(data && data.error || 'fulfillment failed');
+    }catch(err){
+      console.error(err);
+      if(statusBox) statusBox.innerHTML = `<p style="color:var(--warning);">⚠️ Automatic fulfillment server unreachable. Falling back to local delivery.</p>`;
+    }
+  }
+  // Fallback: no backend configured — best-effort local fulfillment
+  fallbackFulfill(product, sessionId, discordUser, statusBox);
+}
+function recordFulfilled(product, sessionId, discordUser){
+  let order = state.orders.slice().reverse().find(o=> (product && o.productId===product.id) && o.status==='pending' && (!discordUser || (o.discordUser && o.discordUser.id===discordUser.id)));
+  if(!order && state.orders.length) order = state.orders[state.orders.length-1];
+  if(order){
+    order.status='fulfilled'; order.sessionId=sessionId;
+    if(product && product.discordRoleId && product.licenseDurationDays>0){
+      order.roleExpiresAt = Date.now() + product.licenseDurationDays*86400000;
+    }
+    persist();
+  }
+}
+function renderFulfillSuccess(items, roleGranted, emailSent){
+  return `
+    <p style="color:var(--success);font-weight:700;margin-bottom:10px;">✅ Order verified &amp; fulfilled</p>
+    ${(items||[]).map(it=>`<div class="download-box"><b>${esc(it.productName||'')}</b><br>
+      ${it.downloadUrl?`<a class="btn sm" style="margin-top:8px;" href="${esc(it.downloadUrl)}" target="_blank">⬇ Download</a>`:'<span class="hint">Download link will be emailed to you.</span>'}</div>`).join('')}
+    <p class="hint" style="margin-top:10px;">${roleGranted?'🎖️ Discord role granted automatically.':''} ${emailSent?'📧 Confirmation email sent.':''}</p>`;
+}
+function fallbackFulfill(product, sessionId, discordUser, statusBox){
+  if(!product){
+    if(statusBox) statusBox.innerHTML = `<p style="color:var(--warning);">We couldn't identify the product automatically. Please contact support on Discord with your payment receipt.</p>`;
+    return;
+  }
+  recordFulfilled(product, sessionId, discordUser);
+  let downloadUrl = product.fileUrl;
+  let keyHtml = '';
+  const pool = state.licensePools[product.id];
+  if(pool && pool.length){
+    const key = pool.shift(); persist();
+    keyHtml = `<div style="margin-top:10px;">Your license key:<br><span class="license-key">${esc(key)}</span></div>`;
+  }
+  // best-effort email via EmailJS if configured
+  const buyerEmail = discordUser && discordUser.email;
+  let emailSent = false;
+  if(state.settings.emailjsServiceId && state.settings.emailjsPublicKey && state.settings.emailjsTemplateId && buyerEmail){
+    loadEmailJS().then(()=>{
+      try{
+        emailjs.init(state.settings.emailjsPublicKey);
+        emailjs.send(state.settings.emailjsServiceId, state.settings.emailjsTemplateId, {
+          to_email: buyerEmail, product_name: product.name, download_url: downloadUrl||'', discord_user: discordUser.username
+        });
+      }catch(e){ console.warn('EmailJS send failed', e); }
+    });
+    emailSent = true;
+  }
+  if(statusBox) statusBox.innerHTML = `
+    <p style="color:var(--warning);font-weight:700;margin-bottom:8px;">⚠️ No fulfillment server connected — delivering on an honor-system basis.</p>
+    <div class="download-box"><b>${esc(product.name)}</b><br>
+      ${downloadUrl?`<a class="btn sm" style="margin-top:8px;" href="${esc(downloadUrl)}" target="_blank">⬇ Download</a>`:'<span class="hint">No file configured — devmode owner needs to add a download link.</span>'}
+      ${keyHtml}
+    </div>
+    <p class="hint" style="margin-top:10px;">${product.discordRoleName?`Your <b>${esc(product.discordRoleName)}</b> role will be added manually or automatically if a Discord bot is connected — ping us in Discord if it's missing.`:''} ${emailSent?'📧 Confirmation email sent.':''}</p>`;
+}
+function loadEmailJS(){
+  return new Promise((resolve,reject)=>{
+    if(window.emailjs) return resolve();
+    const existing = document.getElementById('emailjs-sdk');
+    if(existing && existing.dataset.loaded==='1') return resolve();
+    const check = setInterval(()=>{ if(window.emailjs){ clearInterval(check); resolve(); } }, 150);
+    setTimeout(()=>{ clearInterval(check); if(!window.emailjs) reject(new Error('emailjs failed to load')); }, 6000);
+  });
+}
+
+/* ============================= DEVMODE: GATE =============================
+   Devmode has NO visible entry point anywhere in the customer-facing UI. It is only
+   reachable by navigating directly to the #/devmode URL, and even there it only
+   ever unlocks for the Discord account matching OWNER_DISCORD_ID (see top of file).
+   There is no "claim" step and nothing here is stored in localStorage — an
+   ordinary customer who logs in with Discord from the header never sees any
+   devmode UI, no matter what. */
+function manualLoginBox(){
+  if(!state.settings.manualLoginEnabled) return '';
+  return `
+    <div class="card" style="max-width:380px;margin:0 auto 26px;padding:20px;text-align:left;">
+      <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Enter Discord ID (temporary, no OAuth needed)</label>
+      <input type="text" id="manual-discord-id" placeholder="Your Discord User ID" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);margin-bottom:10px;">
+      <button class="btn block sm" onclick="YS.manualDiscordLogin()">Login with Discord ID</button>
+      <p class="hint" style="margin-top:8px;">Only the exact owner ID will work — any other ID is rejected, nothing is created. This is a placeholder for testing, not real authentication: anyone who reads this page's source can see what ID is required. Turn it off in Devmode → Integrations once Discord OAuth login is working.</p>
+    </div>`;
+}
+function viewDevLocked(){
+  const hasSession = state.session && state.session.discordUser;
+  if(!hasSession && !state.settings.discordClientId && !state.settings.setupLocked){
+    // Bootstrap escape hatch: without a Client ID, Discord login can't work at
+    // all, which would otherwise make Devmode permanently unreachable (it's
+    // the only place the Client ID is normally set). A Client ID isn't
+    // sensitive — Discord exposes it publicly in every OAuth URL — so it's
+    // safe to set here, before login, without weakening the owner-ID gate.
+    return `<section class="wrap" style="padding-top:70px;text-align:center;">
+      ${manualLoginBox()}
+      <div style="font-size:2.6rem;">🔧</div>
+      <h2 style="margin:14px 0;">First-time setup</h2>
+      <p style="color:var(--text-faint);max-width:460px;margin:0 auto 22px;">No Discord Client ID is configured yet, so OAuth login can't work. Paste it once here — you can change it anytime later from Devmode → Integrations.</p>
+      <div style="max-width:420px;margin:0 auto;text-align:left;">
+        <div class="field"><label>Discord Client ID</label><input type="text" id="bootstrap-client-id" placeholder="e.g. 1234567890123456"></div>
+        <div class="hint" style="margin-bottom:8px;">First, register this exact redirect URI in your Discord app's OAuth2 settings:</div>
+        <div class="code-box" style="margin-bottom:18px;">${esc(Discord.redirectUri())}<button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('${esc(Discord.redirectUri())}');YS.toast('Copied!','success')">Copy</button></div>
+        <button class="btn block" onclick="YS.bootstrapClientIdAndLogin()">Save &amp; Login with Discord</button>
+      </div>
+    </section>`;
+  }
+  return `<section class="wrap" style="padding-top:80px;text-align:center;">
+    ${manualLoginBox()}
+    <div style="font-size:2.6rem;">🔒</div>
+    <h2 style="margin:14px 0;">Devmode is locked</h2>
+    <p style="color:var(--text-faint);max-width:420px;margin:0 auto 22px;">This account doesn't have devmode access. Only the store owner's Discord account can manage this site.</p>
+    ${!hasSession? `<button class="btn" onclick="Discord.login()">Login with Discord</button>` : ''}
+  </section>`;
+}
+function manualDiscordLogin(){
+  const input = document.getElementById('manual-discord-id');
+  const val = input ? input.value.trim() : '';
+  if(!val){ toast('Enter a Discord ID.', 'error'); return; }
+  if(val !== OWNER_DISCORD_ID){
+    toast('Incorrect Discord ID — devmode access denied.', 'error');
+    return;
+  }
+  state.session = { accessToken:null, discordUser:{ id:val, username:'Devmode Owner', discriminator:'0', email:null, avatar:'https://cdn.discordapp.com/embed/avatars/0.png' } };
+  saveSession();
+  toast('Logged in as devmode owner.', 'success');
+  renderAuthSlot(); renderDevGear(); renderRoute();
+}
+function bootstrapClientIdAndLogin(){
+  const val = document.getElementById('bootstrap-client-id').value.trim();
+  if(!val){ toast('Paste your Discord Client ID first.', 'error'); return; }
+  state.settings.discordClientId = val;
+  persist();
+  Discord.login();
+}
+function openAccountMenu(){
+  const u = state.session.discordUser;
+  openModal(`
+    <div style="text-align:center;">
+      <img src="${u.avatar}" style="width:64px;height:64px;border-radius:50%;margin:0 auto 14px;">
+      <h3>${esc(u.username)}</h3>
+      <p style="color:var(--text-faint);margin-bottom:20px;">${esc(u.email||'')}</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn ghost" onclick="YS.closeModal();YS.nav('purchases')">My Purchases</button>
+        ${isOwner()?`<button class="btn ghost" onclick="YS.closeModal();YS.nav('devmode')">⚙️ Devmode</button>`:''}
+        <button class="btn danger" onclick="Discord.logout();YS.closeModal();">Logout</button>
+      </div>
+    </div>`, {});
+}
+
+/* ============================= DEVMODE DASHBOARD ============================= */
+function viewDevmode(tab){
+  const tabs = [
+    ['overview','📊 Overview'], ['products','📦 Products'], ['orders','🧾 Orders'],
+    ['settings','⚙️ Store Settings'], ['integrations','🔌 Integrations'], ['danger','⚠️ Danger Zone']
+  ];
+  return `<section class="wrap" style="padding-top:40px;">
+    <div class="section-head">
+      <div><h2>Devmode Dashboard</h2><p>Logged in as ${esc(state.session.discordUser.username)} — full control over your store.</p></div>
+      <span class="pill">👑 Owner Access</span>
+    </div>
+    <div class="admin-grid">
+      <div class="admin-side card" style="padding:12px;">
+        ${tabs.map(([k,l])=>`<button class="${tab===k?'active':''}" onclick="YS.nav('devmode','tab=${k}')">${l}</button>`).join('')}
+      </div>
+      <div id="dev-content">${devTabContent(tab)}</div>
+    </div>
+  </section>`;
+}
+function devTabContent(tab){
+  if(tab==='products') return devProducts();
+  if(tab==='orders') return devOrders();
+  if(tab==='settings') return devSettings();
+  if(tab==='integrations') return devIntegrations();
+  if(tab==='danger') return devDanger();
+  return devOverview();
+}
+function devOverview(){
+  const revenue = state.orders.filter(o=>o.status==='fulfilled').reduce((s,o)=>s+Number(o.amount||0),0);
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
+    <div class="card stat-card"><div class="num">${state.products.length}</div><div class="lbl">Products</div></div>
+    <div class="card stat-card"><div class="num">${state.orders.length}</div><div class="lbl">Total Orders</div></div>
+    <div class="card stat-card"><div class="num">${state.orders.filter(o=>o.status==='fulfilled').length}</div><div class="lbl">Fulfilled</div></div>
+    <div class="card stat-card"><div class="num">${fmtMoney(revenue, state.settings.currency)}</div><div class="lbl">Revenue (local)</div></div>
+  </div>
+  <div class="card" style="padding:22px;">
+    <h3 style="margin-bottom:14px;">Setup Checklist</h3>
+    <div class="kv-row"><span>Discord Client ID</span><span>${state.settings.discordClientId?'✅ Set':'❌ Missing'}</span></div>
+    <div class="kv-row"><span>Discord Invite Link</span><span>${state.settings.discordInvite?'✅ Set':'❌ Missing'}</span></div>
+    <div class="kv-row"><span>Products with payment links</span><span>${state.products.filter(p=>p.stripeLink).length}/${state.products.length}</span></div>
+    <div class="kv-row"><span>Fulfillment server connected</span><span>${state.settings.fulfillmentWebhook?'✅ Connected':'⚠️ Not connected (fallback mode)'}</span></div>
+    <div class="kv-row"><span>Email confirmations (EmailJS)</span><span>${state.settings.emailjsServiceId?'✅ Configured':'⚠️ Not configured'}</span></div>
+  </div>`;
+}
+
+/* ---- Products tab ---- */
+function devProducts(){
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h3>Products (${state.products.length})</h3>
+    <button class="btn sm" onclick="YS.openProductForm()">+ Add Product</button>
+  </div>
+  <div class="card" style="overflow-x:auto;">
+    <table class="admin-table">
+      <thead><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Payment Link</th><th></th></tr></thead>
+      <tbody>
+        ${state.products.map(p=>`
+          <tr>
+            <td>${p.image?`<img class="thumb-sm" src="${p.image}">`:`<div class="thumb-sm" style="display:flex;align-items:center;justify-content:center;">🏀</div>`}</td>
+            <td><b>${esc(p.name)}</b></td>
+            <td>${esc(p.category||'-')}</td>
+            <td>${fmtMoney(p.price,state.settings.currency)}</td>
+            <td><span class="status-dot ${p.active!==false?'active':'inactive'}">${p.active!==false?'Active':'Hidden'}</span></td>
+            <td>${p.stripeLink?'✅':'❌'}</td>
+            <td style="display:flex;gap:6px;">
+              <button class="btn sm ghost" onclick="YS.openProductForm('${p.id}')">Edit</button>
+              <button class="btn sm danger" onclick="YS.deleteProduct('${p.id}')">Delete</button>
+            </td>
+          </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:30px;">No products yet.</td></tr>`}
+      </tbody>
+    </table>
+  </div>`;
+}
+function openProductForm(id){
+  const p = id ? state.products.find(x=>x.id===id) : {
+    id:null, slug:'', name:'', price:0, compareAtPrice:0, category:'', shortDescription:'', description:'',
+    image:'', gallery:[], tags:[], stripeLink:'', discordRoleId:'', discordRoleName:'', licenseDurationDays:0, fileUrl:'', featured:false, active:true
+  };
+  const pool = p.id ? (state.licensePools[p.id]||[]) : [];
+  openModal(`
+    <h2 style="margin-bottom:18px;">${id?'Edit':'Add'} Product</h2>
+    <form id="product-form" onsubmit="return YS.saveProduct(event, '${id||''}')">
+      <div class="field"><label>Product Name</label><input type="text" name="name" required value="${esc(p.name)}"></div>
+      <div class="field-row">
+        <div class="field"><label>Price (${state.settings.currency})</label><input type="number" step="0.01" min="0" name="price" required value="${p.price||0}"></div>
+        <div class="field"><label>Compare-at Price (optional)</label><input type="number" step="0.01" min="0" name="compareAtPrice" value="${p.compareAtPrice||0}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Category</label><input type="text" name="category" value="${esc(p.category||'')}" placeholder="Bots, Scripts, Assets..."></div>
+        <div class="field"><label>Tags (comma separated)</label><input type="text" name="tags" value="${esc((p.tags||[]).join(', '))}"></div>
+      </div>
+      <div class="field"><label>Short Description</label><input type="text" name="shortDescription" value="${esc(p.shortDescription||'')}" placeholder="One-liner shown on product cards"></div>
+      <div class="field"><label>Full Description</label><textarea name="description">${esc(p.description||'')}</textarea></div>
+      <div class="field">
+        <label>Product Image</label>
+        <div class="upload-box" onclick="document.getElementById('img-upload').click()">📷 Click to upload image (stored locally)</div>
+        <input type="file" id="img-upload" accept="image/*" class="hidden" onchange="YS.handleImageUpload(event)">
+        <input type="hidden" name="image" id="image-field" value="${esc(p.image||'')}">
+        <div id="image-preview">${p.image?`<img src="${p.image}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:8px;">`:''}</div>
+        <div class="hint">Or paste an image URL:</div>
+        <input type="url" name="imageUrl" placeholder="https://..." value="${p.image && p.image.startsWith('http')?esc(p.image):''}">
+      </div>
+      <hr class="divider">
+      <div class="field"><label>Stripe Payment Link</label><input type="url" name="stripeLink" value="${esc(p.stripeLink||'')}" placeholder="https://buy.stripe.com/..."></div>
+      <div class="hint" style="margin-top:-10px;margin-bottom:16px;">Create this in your Stripe Dashboard → Payment Links. Set the after-payment redirect to:<br>
+        <span class="code-box" style="display:block;margin-top:6px;">${esc(window.location.origin+window.location.pathname)}?ys_success=1&amp;product=${esc(p.slug||'PRODUCT-SLUG')}&amp;session_id={CHECKOUT_SESSION_ID}</span>
+      </div>
+      <div class="field"><label>Digital File / Download URL</label><input type="url" name="fileUrl" value="${esc(p.fileUrl||'')}" placeholder="https://your-cdn.com/file.zip"></div>
+      <div class="field-row">
+        <div class="field"><label>Discord Role ID (granted on purchase)</label><input type="text" name="discordRoleId" value="${esc(p.discordRoleId||'')}"></div>
+        <div class="field"><label>Discord Role Name (display)</label><input type="text" name="discordRoleName" value="${esc(p.discordRoleName||'')}"></div>
+      </div>
+      <div class="field">
+        <label>License Duration (days) — 0 = lifetime</label>
+        <input type="number" min="0" step="1" name="licenseDurationDays" value="${p.licenseDurationDays||0}">
+        <div class="hint">Only matters if a Discord Role is set above. With the fulfillment server connected, the role is automatically removed after this many days.</div>
+      </div>
+      <div class="field">
+        <label>License Key Pool (optional — one key given per sale)</label>
+        <textarea name="licensePool" placeholder="KEY-AAAA-1111&#10;KEY-BBBB-2222">${pool.join('\n')}</textarea>
+        <div class="hint">${pool.length} unused keys remaining</div>
+      </div>
+      <div class="switch-row"><span>Featured product</span><label class="switch"><input type="checkbox" name="featured" ${p.featured?'checked':''}><span class="slider"></span></label></div>
+      <div class="switch-row"><span>Active (visible in shop)</span><label class="switch"><input type="checkbox" name="active" ${p.active!==false?'checked':''}><span class="slider"></span></label></div>
+      <hr class="divider">
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <button type="button" class="btn ghost" onclick="YS.closeModal()">Cancel</button>
+        <button type="submit" class="btn">Save Product</button>
+      </div>
+    </form>`, {wide:true});
+}
+function handleImageUpload(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  if(file.size > 3*1024*1024){ toast('Image too large — please use an image under 3MB.', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    document.getElementById('image-field').value = reader.result;
+    document.getElementById('image-preview').innerHTML = `<img src="${reader.result}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:8px;">`;
+  };
+  reader.readAsDataURL(file);
+}
+function saveProduct(ev, id){
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  const imageUrl = fd.get('imageUrl');
+  const name = fd.get('name').trim();
+  const existing = id ? state.products.find(x=>x.id===id) : null;
+  const product = {
+    id: id || uid('p'),
+    slug: existing ? existing.slug : slugify(name),
+    name,
+    price: parseFloat(fd.get('price'))||0,
+    compareAtPrice: parseFloat(fd.get('compareAtPrice'))||0,
+    category: fd.get('category').trim(),
+    tags: fd.get('tags').split(',').map(t=>t.trim()).filter(Boolean),
+    shortDescription: fd.get('shortDescription').trim(),
+    description: fd.get('description').trim(),
+    image: imageUrl || fd.get('image') || '',
+    gallery: existing ? existing.gallery : [],
+    stripeLink: fd.get('stripeLink').trim(),
+    fileUrl: fd.get('fileUrl').trim(),
+    discordRoleId: fd.get('discordRoleId').trim(),
+    discordRoleName: fd.get('discordRoleName').trim(),
+    licenseDurationDays: parseInt(fd.get('licenseDurationDays'),10)||0,
+    featured: fd.get('featured')==='on',
+    active: fd.get('active')==='on',
+    createdAt: existing ? existing.createdAt : Date.now()
+  };
+  const poolText = fd.get('licensePool')||'';
+  state.licensePools[product.id] = poolText.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(existing) Object.assign(existing, product);
+  else state.products.push(product);
+  persist(); closeModal(); toast('Product saved.', 'success');
+  if(document.getElementById('dev-content')) document.getElementById('dev-content').innerHTML = devProducts();
+  return false;
+}
+function deleteProduct(id){
+  if(!confirm('Delete this product? This cannot be undone.')) return;
+  state.products = state.products.filter(p=>p.id!==id);
+  delete state.licensePools[id];
+  persist(); toast('Product deleted.', 'success');
+  document.getElementById('dev-content').innerHTML = devProducts();
+}
+
+/* ---- Orders tab ---- */
+function devOrders(){
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h3>Orders (${state.orders.length})</h3>
+    <button class="btn sm ghost" onclick="YS.refreshOrdersFromServer()">↻ Refresh from Server</button>
+  </div>
+  <div class="card" style="overflow-x:auto;">
+    <table class="admin-table">
+      <thead><tr><th>Product</th><th>Buyer</th><th>Amount</th><th>Status</th><th>Date</th><th>Role Expiry</th></tr></thead>
+      <tbody>
+        ${state.orders.slice().reverse().map(o=>{
+          const expiry = o.roleExpiresAt ? (o.roleExpiresAt>Date.now() ? fmtDate(o.roleExpiresAt) : `<span style="color:var(--danger);">Expired</span>`) : '—';
+          return `<tr><td>${esc(o.productName)}</td><td>${o.discordUser?esc(o.discordUser.username):(o.guestEmail?esc(o.guestEmail):'Guest')}</td>
+          <td>${fmtMoney(o.amount,state.settings.currency)}</td>
+          <td><span class="status-dot ${o.status==='fulfilled'?'active':'inactive'}">${esc(o.status)}</span></td>
+          <td>${fmtDate(o.createdAt)}</td><td>${expiry}</td></tr>`;
+        }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text-faint);padding:30px;">No orders recorded on this device yet.</td></tr>`}
+      </tbody>
+    </table>
+  </div>`;
+}
+async function refreshOrdersFromServer(){
+  if(!state.settings.checkoutApiUrl){ toast('No checkout server configured.', 'warn'); return; }
+  try{
+    const res = await fetch(state.settings.checkoutApiUrl.replace(/\/$/,'')+'/api/admin/orders', {
+      headers:{ Authorization:'Bearer '+(state.settings.adminApiKey||'') }
+    });
+    if(!res.ok) throw new Error('status '+res.status);
+    const data = await res.json();
+    if(Array.isArray(data.orders)){
+      state.orders = data.orders; persist();
+      document.getElementById('dev-content').innerHTML = devOrders();
+      toast('Orders refreshed from server.', 'success');
+    }
+  }catch(err){ console.error(err); toast('Could not reach checkout server.', 'error'); }
+}
+
+/* ---- Settings tab ---- */
+function devSettings(){
+  const s = state.settings;
+  return `
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:18px;">Branding &amp; Copy</h3>
+    <form id="settings-form" onsubmit="return YS.saveSettings(event)">
+      <div class="field-row">
+        <div class="field"><label>Brand First Word</label><input type="text" name="brandFirstWord" value="${esc(s.brandFirstWord)}"></div>
+        <div class="field"><label>Brand Second Word</label><input type="text" name="brandWord" value="${esc(s.brandWord)}"></div>
+      </div>
+      <div class="field"><label>Tagline</label><input type="text" name="tagline" value="${esc(s.tagline)}"></div>
+      <div class="field"><label>Hero Title (use {accent}...{/accent} to highlight, \\n for line break)</label><textarea name="heroTitle">${esc(s.heroTitle)}</textarea></div>
+      <div class="field"><label>Hero Subtitle</label><textarea name="heroSubtitle">${esc(s.heroSubtitle)}</textarea></div>
+      <div class="field"><label>Footer Blurb</label><textarea name="footerBlurb">${esc(s.footerBlurb)}</textarea></div>
+      <div class="switch-row"><span>Show announcement bar</span><label class="switch"><input type="checkbox" name="announcementEnabled" ${s.announcementEnabled?'checked':''}><span class="slider"></span></label></div>
+      <div class="field"><label>Announcement Text</label><input type="text" name="announcement" value="${esc(s.announcement)}"></div>
+      <div class="field-row">
+        <div class="field"><label>Website Link</label><input type="url" name="socialWebsite" value="${esc(s.socialWebsite)}" placeholder="https://..."></div>
+        <div class="field"><label>X / Twitter Link</label><input type="url" name="socialTwitter" value="${esc(s.socialTwitter)}" placeholder="https://x.com/..."></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:18px;">Look &amp; Feel</h3>
+    <div class="field-row">
+      <div class="field"><label>Primary Accent Color</label><input type="text" name="accentColor" form="settings-form" value="${esc(s.accentColor)}"></div>
+      <div class="field"><label>Secondary Accent Color</label><input type="text" name="accentColor2" form="settings-form" value="${esc(s.accentColor2)}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Currency</label>
+        <select name="currency" form="settings-form"><option ${s.currency==='USD'?'selected':''}>USD</option><option ${s.currency==='EUR'?'selected':''}>EUR</option><option ${s.currency==='GBP'?'selected':''}>GBP</option><option ${s.currency==='CAD'?'selected':''}>CAD</option></select>
+      </div>
+      <div class="field"><label>Background Intensity (0 – 2)</label><input type="number" step="0.1" min="0" max="2" name="bgIntensity" form="settings-form" value="${s.bgIntensity!=null?s.bgIntensity:1}"></div>
+    </div>
+    <div class="field">
+      <label>Custom Logo</label>
+      <div class="upload-box" onclick="document.getElementById('logo-upload').click()">🖼️ Upload custom logo (defaults to YOLO.ico)</div>
+      <input type="file" id="logo-upload" accept="image/*" class="hidden" onchange="YS.handleLogoUpload(event)">
+      <input type="hidden" name="logoDataUrl" form="settings-form" id="logo-field" value="${esc(s.logoDataUrl||'')}">
+    </div>
+    <div class="switch-row"><span>Reduce background motion</span><label class="switch"><input type="checkbox" name="reduceMotion" form="settings-form" ${s.reduceMotion?'checked':''}><span class="slider"></span></label></div>
+  </div>
+
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:18px;">Home Page Sections</h3>
+    <div class="switch-row"><span>Show "About" section</span><label class="switch"><input type="checkbox" name="aboutEnabled" form="settings-form" ${s.aboutEnabled?'checked':''}><span class="slider"></span></label></div>
+    <div class="field"><label>About Title</label><input type="text" name="aboutTitle" form="settings-form" value="${esc(s.aboutTitle)}"></div>
+    <div class="field"><label>About Body</label><textarea name="aboutBody" form="settings-form">${esc(s.aboutBody)}</textarea></div>
+    <hr class="divider">
+    <div class="switch-row"><span>Show "Testimonials" section</span><label class="switch"><input type="checkbox" name="testimonialsEnabled" form="settings-form" ${s.testimonialsEnabled?'checked':''}><span class="slider"></span></label></div>
+    <div id="testimonial-list">${(s.testimonials||[]).map((t,i)=>testimonialRow(t,i)).join('') || '<p class="hint">No testimonials yet.</p>'}</div>
+    <button type="button" class="btn sm ghost" style="margin-top:10px;" onclick="YS.addTestimonial()">+ Add Testimonial</button>
+    <hr class="divider">
+    <div class="switch-row"><span>Show newsletter signup</span><label class="switch"><input type="checkbox" name="newsletterEnabled" form="settings-form" ${s.newsletterEnabled?'checked':''}><span class="slider"></span></label></div>
+    <div class="field-row">
+      <div class="field"><label>Newsletter Title</label><input type="text" name="newsletterTitle" form="settings-form" value="${esc(s.newsletterTitle)}"></div>
+      <div class="field"><label>Newsletter Subtitle</label><input type="text" name="newsletterSubtitle" form="settings-form" value="${esc(s.newsletterSubtitle)}"></div>
+    </div>
+    <div class="hint">${state.subscribers.length} subscriber${state.subscribers.length===1?'':'s'} collected — <a href="#" onclick="YS.exportSubscribers();return false;" style="color:var(--accent-2);">export CSV</a></div>
+  </div>
+
+  <div style="text-align:right;"><button type="submit" form="settings-form" class="btn">Save Settings</button></div>`;
+}
+function testimonialRow(t,i){
+  return `<div class="card" style="padding:14px;margin-top:10px;display:flex;gap:10px;align-items:flex-start;">
+    <div style="flex:1;">
+      <input type="text" placeholder="Name" value="${esc(t.name)}" style="width:100%;margin-bottom:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);" onchange="YS.updateTestimonial(${i},'name',this.value)">
+      <textarea placeholder="Quote" style="width:100%;min-height:60px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);" onchange="YS.updateTestimonial(${i},'quote',this.value)">${esc(t.quote)}</textarea>
+    </div>
+    <button type="button" class="btn sm danger" onclick="YS.removeTestimonial(${i})">✕</button>
+  </div>`;
+}
+function addTestimonial(){
+  state.settings.testimonials = state.settings.testimonials||[];
+  state.settings.testimonials.push({name:'', quote:''});
+  persist();
+  document.getElementById('testimonial-list').innerHTML = state.settings.testimonials.map((t,i)=>testimonialRow(t,i)).join('');
+}
+function updateTestimonial(i, key, val){ state.settings.testimonials[i][key] = val; persist(); }
+function removeTestimonial(i){ state.settings.testimonials.splice(i,1); persist(); document.getElementById('testimonial-list').innerHTML = state.settings.testimonials.map((t,i2)=>testimonialRow(t,i2)).join('') || '<p class="hint">No testimonials yet.</p>'; }
+function exportSubscribers(){
+  if(!state.subscribers.length){ toast('No subscribers yet.', 'warn'); return; }
+  const csv = 'email,subscribedAt\n' + state.subscribers.map(s=>`${s.email},${new Date(s.at).toISOString()}`).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'yoloscripts-subscribers.csv'; a.click();
+}
+function handleLogoUpload(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ document.getElementById('logo-field').value = reader.result; toast('Logo ready — click Save Settings.', 'success'); };
+  reader.readAsDataURL(file);
+}
+function saveSettings(ev){
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  Object.assign(state.settings, {
+    brandFirstWord: fd.get('brandFirstWord'), brandWord: fd.get('brandWord'), tagline: fd.get('tagline'),
+    heroTitle: fd.get('heroTitle'), heroSubtitle: fd.get('heroSubtitle'), footerBlurb: fd.get('footerBlurb'),
+    announcementEnabled: fd.get('announcementEnabled')==='on', announcement: fd.get('announcement'),
+    socialWebsite: fd.get('socialWebsite'), socialTwitter: fd.get('socialTwitter'),
+    accentColor: fd.get('accentColor')||'#a855f7', accentColor2: fd.get('accentColor2')||'#c084fc',
+    bgIntensity: parseFloat(fd.get('bgIntensity'))||1, currency: fd.get('currency'),
+    logoDataUrl: fd.get('logoDataUrl'), reduceMotion: fd.get('reduceMotion')==='on',
+    aboutEnabled: fd.get('aboutEnabled')==='on', aboutTitle: fd.get('aboutTitle'), aboutBody: fd.get('aboutBody'),
+    testimonialsEnabled: fd.get('testimonialsEnabled')==='on',
+    newsletterEnabled: fd.get('newsletterEnabled')==='on', newsletterTitle: fd.get('newsletterTitle'), newsletterSubtitle: fd.get('newsletterSubtitle')
+  });
+  persist(); applyTheme(); toast('Settings saved.', 'success');
+  return false;
+}
+
+/* ---- Integrations tab ---- */
+function devIntegrations(){
+  const s = state.settings;
+  return `
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:6px;">💳 Stripe</h3>
+    <p class="hint" style="margin-bottom:16px;">Per-product payment happens via Stripe Payment Links (set on each product in the Products tab) — no keys needed for that. These keys are only used if you connect the optional fulfillment server below, or as your own reference. They're stored only in this browser and are never sent anywhere unless you click "Sync to Server".</p>
+    <div class="field"><label>Publishable Key</label><input type="text" name="stripePublishableKey" form="int-form" value="${esc(s.stripePublishableKey)}" placeholder="pk_live_..."></div>
+    <div class="field"><label>Secret Key <span style="color:var(--warning);">(sensitive — keep private)</span></label><input type="password" name="stripeSecretKey" form="int-form" value="${esc(s.stripeSecretKey)}" placeholder="sk_live_..." autocomplete="off"></div>
+    <p class="hint">The secret key actually gets <em>used</em> only on your own server (see <code>.env</code> for <code>fulfillment-server.js</code>) — a static webpage can never use it safely.</p>
+  </div>
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:6px;">💬 Discord</h3>
+    <p class="hint" style="margin-bottom:16px;">Create an application at discord.com/developers/applications, add an OAuth2 redirect, and paste the Client ID below.</p>
+    <div class="field"><label>Discord Invite Link (shown to buyers)</label><input type="url" name="discordInvite" form="int-form" value="${esc(s.discordInvite)}"></div>
+    <div class="field"><label>Discord Client ID</label><input type="text" name="discordClientId" form="int-form" value="${esc(s.discordClientId)}"></div>
+    <div class="field"><label>Discord Guild (Server) ID</label><input type="text" name="discordGuildId" form="int-form" value="${esc(s.discordGuildId)}"></div>
+    <div class="field"><label>OAuth2 Redirect URI (register this exact URL in Discord)</label>
+      <div class="code-box">${esc(Discord.redirectUri())}<button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('${esc(Discord.redirectUri())}');YS.toast('Copied!','success')">Copy</button></div>
+    </div>
+    <hr class="divider">
+    <div class="switch-row"><span>Lock first-time setup screen</span><label class="switch"><input type="checkbox" name="setupLocked" form="int-form" ${s.setupLocked?'checked':''}><span class="slider"></span></label></div>
+    <p class="hint">Once your Client ID above is confirmed working, turn this on. It permanently hides the "First-time setup" bootstrap screen on <em>this browser</em> — anyone who lands on the hidden #/devmode URL without a session just sees "Devmode is locked," with no way to enter a different Client ID. (Since settings live per-browser, this only affects this browser; it never grants access to anyone regardless — the owner-ID check is unaffected either way.)</p>
+    <hr class="divider">
+    <div class="switch-row"><span>Allow manual Discord ID login</span><label class="switch"><input type="checkbox" name="manualLoginEnabled" form="int-form" ${s.manualLoginEnabled?'checked':''}><span class="slider"></span></label></div>
+    <p class="hint" style="color:${s.manualLoginEnabled?'var(--warning)':'var(--text-faint)'};">${s.manualLoginEnabled?'⚠️ Currently ON — anyone who reads this page\'s source can see your owner Discord ID and try typing it into the "Enter Discord ID" box. It only ever grants access if it matches exactly, but it\'s not real authentication. ':''}Turn this off once "Login with Discord" above is confirmed working — OAuth verifies you actually own the account; manual entry doesn't verify anything.</p>
+  </div>
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:6px;">📧 EmailJS (client-side email, no backend needed)</h3>
+    <p class="hint" style="margin-bottom:16px;">Create a free account at emailjs.com, add an email service + template, then paste the IDs below for automatic buyer confirmation emails.</p>
+    <div class="field-row">
+      <div class="field"><label>Service ID</label><input type="text" name="emailjsServiceId" form="int-form" value="${esc(s.emailjsServiceId)}"></div>
+      <div class="field"><label>Template ID</label><input type="text" name="emailjsTemplateId" form="int-form" value="${esc(s.emailjsTemplateId)}"></div>
+    </div>
+    <div class="field"><label>Public Key</label><input type="text" name="emailjsPublicKey" form="int-form" value="${esc(s.emailjsPublicKey)}"></div>
+  </div>
+  <div class="card" style="padding:24px;margin-bottom:20px;">
+    <h3 style="margin-bottom:6px;">🖥️ Fulfillment / Checkout Server (optional, for full automation)</h3>
+    <p class="hint" style="margin-bottom:16px;">Deploy the included <code>fulfillment-server.js</code> companion server to enable automatic Discord role granting, verified payment checks, multi-item cart checkout, and server-sent emails. Leave blank to run in standalone honor-system mode.</p>
+    <div class="field"><label>Checkout / Fulfillment Server Base URL</label><input type="url" name="checkoutApiUrl" form="int-form" placeholder="https://your-server.com" value="${esc(s.checkoutApiUrl)}"></div>
+    <div class="field"><label>Fulfillment Webhook (auto-filled from base URL if blank)</label><input type="url" name="fulfillmentWebhook" form="int-form" placeholder="https://your-server.com/api/fulfill" value="${esc(s.fulfillmentWebhook)}"></div>
+    <div class="field"><label>Admin API Key (must match server .env ADMIN_KEY)</label><input type="password" name="adminApiKey" form="int-form" value="${esc(s.adminApiKey)}"></div>
+    <button class="btn sm ghost" type="button" onclick="YS.syncToServer()">↑ Sync Products &amp; Settings to Server</button>
+  </div>
+  <form id="int-form" onsubmit="return YS.saveIntegrations(event)">
+    <div style="text-align:right;"><button type="submit" class="btn">Save Integrations</button></div>
+  </form>`;
+}
+function saveIntegrations(ev){
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  const newClientId = fd.get('discordClientId');
+  const wantsLock = fd.get('setupLocked')==='on';
+  if(wantsLock && !newClientId){
+    toast('Set a Discord Client ID before locking the setup screen — otherwise you could lock yourself out.', 'error');
+    return false;
+  }
+  Object.assign(state.settings, {
+    stripePublishableKey: fd.get('stripePublishableKey'), stripeSecretKey: fd.get('stripeSecretKey'),
+    discordInvite: fd.get('discordInvite'), discordClientId: newClientId, discordGuildId: fd.get('discordGuildId'),
+    setupLocked: wantsLock, manualLoginEnabled: fd.get('manualLoginEnabled')==='on',
+    emailjsServiceId: fd.get('emailjsServiceId'), emailjsTemplateId: fd.get('emailjsTemplateId'), emailjsPublicKey: fd.get('emailjsPublicKey'),
+    checkoutApiUrl: fd.get('checkoutApiUrl'),
+    fulfillmentWebhook: fd.get('fulfillmentWebhook') || (fd.get('checkoutApiUrl') ? fd.get('checkoutApiUrl').replace(/\/$/,'')+'/api/fulfill' : ''),
+    adminApiKey: fd.get('adminApiKey')
+  });
+  persist(); applyTheme(); toast('Integrations saved.', 'success');
+  return false;
+}
+async function syncToServer(){
+  if(!state.settings.checkoutApiUrl){ toast('Set a checkout server URL first.', 'error'); return; }
+  try{
+    const res = await fetch(state.settings.checkoutApiUrl.replace(/\/$/,'')+'/api/admin/sync-products', {
+      method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+(state.settings.adminApiKey||'')},
+      body: JSON.stringify({ products: state.products, settings: state.settings })
+    });
+    if(!res.ok) throw new Error('status '+res.status);
+    toast('Synced products & settings to server.', 'success');
+  }catch(err){ console.error(err); toast('Sync failed — check server URL and admin key.', 'error'); }
+}
+
+/* ---- Danger zone ---- */
+function devDanger(){
+  return `
+  <div class="card" style="padding:24px;border-color:var(--danger);margin-bottom:20px;">
+    <h3 style="color:var(--danger);margin-bottom:10px;">Export / Import Store Data</h3>
+    <p class="hint" style="margin-bottom:16px;">This store's data lives in this browser only. Back it up regularly.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn sm ghost" onclick="YS.exportData()">⬇ Export JSON Backup</button>
+      <button class="btn sm ghost" onclick="document.getElementById('import-file').click()">⬆ Import JSON Backup</button>
+      <input type="file" id="import-file" accept="application/json" class="hidden" onchange="YS.importData(event)">
+    </div>
+  </div>
+  <div class="card" style="padding:24px;border-color:var(--danger);">
+    <h3 style="color:var(--danger);margin-bottom:10px;">Wipe All Store Data</h3>
+    <p class="hint" style="margin-bottom:16px;">Deletes all products, orders, and settings from this browser. Cannot be undone.</p>
+    <button class="btn danger sm" onclick="YS.wipeAll()">Wipe Everything</button>
+  </div>`;
+}
+function exportData(){
+  const data = { settings:state.settings, products:state.products, orders:state.orders, licensePools:state.licensePools, exportedAt:Date.now() };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'yoloscripts-backup-'+Date.now()+'.json'; a.click();
+  toast('Backup downloaded.', 'success');
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(data.settings) state.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+      if(data.products) state.products = data.products;
+      if(data.orders) state.orders = data.orders;
+      if(data.licensePools) state.licensePools = data.licensePools;
+      persist(); applyTheme(); renderDevGear(); renderRoute();
+      toast('Backup imported successfully.', 'success');
+    }catch(e){ toast('Invalid backup file.', 'error'); }
+  };
+  reader.readAsText(file);
+}
+function wipeAll(){
+  if(!confirm('This will permanently delete ALL store data on this browser. Continue?')) return;
+  if(!confirm('Are you absolutely sure? This cannot be undone.')) return;
+  Object.values(LS).forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
+
+/* ============================= NAV HELPER ============================= */
+function nav(route, opts){ navTo(route, opts); }
+function toggleMobileNav(){ document.getElementById('mobile-nav').classList.toggle('hidden'); }
+function dismissAnnounce(){ state.settings.announcementEnabled = false; persist(); applyTheme(); }
+
+/* ============================= BOOT ============================= */
+window.YS = {
+  nav, toast, openProduct, buyNow, addToCart, removeFromCart, toggleWishlist, openWishlist, openCart, checkout,
+  closeModal, closeDrawer, openAccountMenu, bootstrapClientIdAndLogin, manualDiscordLogin,
+  openProductForm, saveProduct, deleteProduct, handleImageUpload, handleLogoUpload,
+  saveSettings, saveIntegrations, syncToServer, refreshOrdersFromServer,
+  addTestimonial, updateTestimonial, removeTestimonial, exportSubscribers, subscribeNewsletter,
+  exportData, importData, wipeAll, toggleMobileNav, dismissAnnounce, renderRoute
+};
+
+document.addEventListener('DOMContentLoaded', async function(){
+  applyTheme();
+  renderAuthSlot();
+  renderDevGear();
+  updateBadges();
+  await Discord.handleRedirect();
+  await handleReturnFromStripe();
+  renderRoute();
+});
+
+})();
+</script>
+</body>
+</html>
