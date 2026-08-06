@@ -529,8 +529,8 @@ const DEFAULT_SETTINGS = {
   checkoutApiUrl:'',
   adminApiKey:'',
   reduceMotion:false,
-  setupLocked:false,
-  manualLoginEnabled:true
+  setupLocked:true,
+  manualLoginEnabled:false
 };
 
 // Empty by default — the store owner adds every product through Devmode.
@@ -573,6 +573,13 @@ if(state.settings.heroTitle === 'Digital Products\nBuilt to {accent}Dominate{/ac
 // settings blob before this value was shipped in DEFAULT_SETTINGS.
 if(!state.settings.discordClientId && DEFAULT_SETTINGS.discordClientId){
   state.settings.discordClientId = DEFAULT_SETTINGS.discordClientId;
+  saveJSON(LS.settings, state.settings);
+}
+// Permanently kill the "type Discord ID" bypass and lock first-time setup.
+// Devmode is OAuth-only for OWNER_DISCORD_ID — no public entry UI for anyone else.
+if(state.settings.manualLoginEnabled !== false || state.settings.setupLocked !== true){
+  state.settings.manualLoginEnabled = false;
+  state.settings.setupLocked = true;
   saveJSON(LS.settings, state.settings);
 }
 
@@ -1244,63 +1251,28 @@ function loadEmailJS(){
 }
 
 /* ============================= DEVMODE: GATE =============================
-   Devmode has NO visible entry point anywhere in the customer-facing UI. It is only
-   reachable by navigating directly to the #/devmode URL, and even there it only
-   ever unlocks for the Discord account matching OWNER_DISCORD_ID (see top of file).
-   There is no "claim" step and nothing here is stored in localStorage — an
-   ordinary customer who logs in with Discord from the header never sees any
-   devmode UI, no matter what. */
-function manualLoginBox(){
-  if(!state.settings.manualLoginEnabled) return '';
-  return `
-    <div class="card" style="max-width:380px;margin:0 auto 26px;padding:20px;text-align:left;">
-      <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Enter Discord ID (temporary, no OAuth needed)</label>
-      <input type="text" id="manual-discord-id" placeholder="Your Discord User ID" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(10,5,22,.6);color:var(--text);margin-bottom:10px;">
-      <button class="btn block sm" onclick="YS.manualDiscordLogin()">Login with Discord ID</button>
-      <p class="hint" style="margin-top:8px;">Only the exact owner ID will work — any other ID is rejected, nothing is created. This is a placeholder for testing, not real authentication: anyone who reads this page's source can see what ID is required. Turn it off in Devmode → Integrations once Discord OAuth login is working.</p>
-    </div>`;
-}
+   Devmode has NO customer-facing entry point. The gear only renders for
+   OWNER_DISCORD_ID after a real Discord OAuth login. Manual "type an ID"
+   login is permanently removed — typing an ID can never unlock Devmode.
+   Non-owners who hit #/devmode are sent home so the admin UI stays hidden. */
 function viewDevLocked(){
   const hasSession = state.session && state.session.discordUser;
-  if(!hasSession && !state.settings.discordClientId && !state.settings.setupLocked){
-    // Bootstrap escape hatch: without a Client ID, Discord login can't work at
-    // all, which would otherwise make Devmode permanently unreachable (it's
-    // the only place the Client ID is normally set). A Client ID isn't
-    // sensitive — Discord exposes it publicly in every OAuth URL — so it's
-    // safe to set here, before login, without weakening the owner-ID gate.
-    return `<section class="wrap" style="padding-top:70px;text-align:center;">
-      ${manualLoginBox()}
-      <div style="font-size:2.6rem;">🔧</div>
-      <h2 style="margin:14px 0;">First-time setup</h2>
-      <p style="color:var(--text-faint);max-width:460px;margin:0 auto 22px;">No Discord Client ID is configured yet, so OAuth login can't work. Paste it once here — you can change it anytime later from Devmode → Integrations.</p>
-      <div style="max-width:420px;margin:0 auto;text-align:left;">
-        <div class="field"><label>Discord Client ID</label><input type="text" id="bootstrap-client-id" placeholder="e.g. 1234567890123456"></div>
-        <div class="hint" style="margin-bottom:8px;">First, register this exact redirect URI in your Discord app's OAuth2 settings:</div>
-        <div class="code-box" style="margin-bottom:18px;">${esc(Discord.redirectUri())}<button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('${esc(Discord.redirectUri())}');YS.toast('Copied!','success')">Copy</button></div>
-        <button class="btn block" onclick="YS.bootstrapClientIdAndLogin()">Save &amp; Login with Discord</button>
-      </div>
-    </section>`;
+  // Logged-in non-owner: pretend the route doesn't exist.
+  if(hasSession){
+    setTimeout(()=> YS.nav('home'), 0);
+    return '';
   }
+  // Logged-out visitor on #/devmode: only a Discord OAuth button (owner uses this).
   return `<section class="wrap" style="padding-top:80px;text-align:center;">
-    ${manualLoginBox()}
-    <div style="font-size:2.6rem;">🔒</div>
-    <h2 style="margin:14px 0;">Devmode is locked</h2>
-    <p style="color:var(--text-faint);max-width:420px;margin:0 auto 22px;">This account doesn't have devmode access. Only the store owner's Discord account can manage this site.</p>
-    ${!hasSession? `<button class="btn" onclick="Discord.login()">Login with Discord</button>` : ''}
+    <div style="font-size:2.6rem;">🔐</div>
+    <h2 style="margin:14px 0;">Sign in required</h2>
+    <p style="color:var(--text-faint);max-width:420px;margin:0 auto 22px;">Log in with Discord to continue.</p>
+    <button class="btn" onclick="Discord.login()">Login with Discord</button>
   </section>`;
 }
 function manualDiscordLogin(){
-  const input = document.getElementById('manual-discord-id');
-  const val = input ? input.value.trim() : '';
-  if(!val){ toast('Enter a Discord ID.', 'error'); return; }
-  if(val !== OWNER_DISCORD_ID){
-    toast('Incorrect Discord ID — devmode access denied.', 'error');
-    return;
-  }
-  state.session = { accessToken:null, discordUser:{ id:val, username:'Devmode Owner', discriminator:'0', email:null, avatar:'https://cdn.discordapp.com/embed/avatars/0.png' } };
-  saveSession();
-  toast('Logged in as devmode owner.', 'success');
-  renderAuthSlot(); renderDevGear(); renderRoute();
+  // Permanently disabled — Devmode requires real Discord OAuth as the owner.
+  toast('Manual Discord ID login is disabled. Use Login with Discord.', 'error');
 }
 function bootstrapClientIdAndLogin(){
   const val = document.getElementById('bootstrap-client-id').value.trim();
@@ -1683,12 +1655,7 @@ function devIntegrations(){
     <div class="field"><label>OAuth2 Redirect URI (register this exact URL in Discord)</label>
       <div class="code-box">${esc(Discord.redirectUri())}<button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('${esc(Discord.redirectUri())}');YS.toast('Copied!','success')">Copy</button></div>
     </div>
-    <hr class="divider">
-    <div class="switch-row"><span>Lock first-time setup screen</span><label class="switch"><input type="checkbox" name="setupLocked" form="int-form" ${s.setupLocked?'checked':''}><span class="slider"></span></label></div>
-    <p class="hint">Once your Client ID above is confirmed working, turn this on. It permanently hides the "First-time setup" bootstrap screen on <em>this browser</em> — anyone who lands on the hidden #/devmode URL without a session just sees "Devmode is locked," with no way to enter a different Client ID. (Since settings live per-browser, this only affects this browser; it never grants access to anyone regardless — the owner-ID check is unaffected either way.)</p>
-    <hr class="divider">
-    <div class="switch-row"><span>Allow manual Discord ID login</span><label class="switch"><input type="checkbox" name="manualLoginEnabled" form="int-form" ${s.manualLoginEnabled?'checked':''}><span class="slider"></span></label></div>
-    <p class="hint" style="color:${s.manualLoginEnabled?'var(--warning)':'var(--text-faint)'};">${s.manualLoginEnabled?'⚠️ Currently ON — anyone who reads this page\'s source can see your owner Discord ID and try typing it into the "Enter Discord ID" box. It only ever grants access if it matches exactly, but it\'s not real authentication. ':''}Turn this off once "Login with Discord" above is confirmed working — OAuth verifies you actually own the account; manual entry doesn't verify anything.</p>
+    <p class="hint" style="margin-top:12px;">Devmode is OAuth-only for your owner Discord account. Manual Discord ID login and the first-time setup bypass are permanently disabled.</p>
   </div>
   <div class="card" style="padding:24px;margin-bottom:20px;">
     <h3 style="margin-bottom:6px;">📧 EmailJS (client-side email, no backend needed)</h3>
@@ -1715,15 +1682,10 @@ function saveIntegrations(ev){
   ev.preventDefault();
   const fd = new FormData(ev.target);
   const newClientId = fd.get('discordClientId');
-  const wantsLock = fd.get('setupLocked')==='on';
-  if(wantsLock && !newClientId){
-    toast('Set a Discord Client ID before locking the setup screen — otherwise you could lock yourself out.', 'error');
-    return false;
-  }
   Object.assign(state.settings, {
     stripePublishableKey: fd.get('stripePublishableKey'), stripeSecretKey: fd.get('stripeSecretKey'),
     discordInvite: fd.get('discordInvite'), discordClientId: newClientId, discordGuildId: fd.get('discordGuildId'),
-    setupLocked: wantsLock, manualLoginEnabled: fd.get('manualLoginEnabled')==='on',
+    setupLocked: true, manualLoginEnabled: false,
     emailjsServiceId: fd.get('emailjsServiceId'), emailjsTemplateId: fd.get('emailjsTemplateId'), emailjsPublicKey: fd.get('emailjsPublicKey'),
     checkoutApiUrl: fd.get('checkoutApiUrl'),
     fulfillmentWebhook: fd.get('fulfillmentWebhook') || (fd.get('checkoutApiUrl') ? fd.get('checkoutApiUrl').replace(/\/$/,'')+'/api/fulfill' : ''),
