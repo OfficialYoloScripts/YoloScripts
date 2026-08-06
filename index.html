@@ -655,10 +655,12 @@ function applyTheme(){
 window.__ysDismissAnnounce = false;
 
 /* ============================= DISCORD OAUTH (implicit flow) ============================= */
+// Must match an exact Redirect URI registered in Discord Developer Portal → OAuth2.
+const PRE_FILLED_CLIENT_ID = '1535016417940869140';
 const Discord = {
-  redirectUri(){ return window.location.origin + window.location.pathname; },
+  redirectUri(){ return 'https://yoloscripts.computervision.workers.dev/'; },
   authUrl(){
-    const cid = state.settings.discordClientId;
+    const cid = state.settings.discordClientId || PRE_FILLED_CLIENT_ID;
     const params = new URLSearchParams({
       client_id: cid || '',
       redirect_uri: this.redirectUri(),
@@ -668,7 +670,7 @@ const Discord = {
     return 'https://discord.com/oauth2/authorize?'+params.toString();
   },
   login(){
-    if(!state.settings.discordClientId){
+    if(!(state.settings.discordClientId || PRE_FILLED_CLIENT_ID)){
       toast('Discord Client ID is not configured yet. Devmode owners: set it in Settings.', 'error');
       return;
     }
