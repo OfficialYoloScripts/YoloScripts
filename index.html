@@ -525,8 +525,8 @@ const DEFAULT_SETTINGS = {
   emailjsServiceId:'',
   emailjsTemplateId:'',
   emailjsPublicKey:'',
-  fulfillmentWebhook:'',
-  checkoutApiUrl:'',
+  fulfillmentWebhook:'https://yoloscripts.onrender.com/api/fulfill',
+  checkoutApiUrl:'https://yoloscripts.onrender.com',
   adminApiKey:'',
   reduceMotion:false,
   setupLocked:true,
@@ -580,6 +580,12 @@ if(!state.settings.discordClientId && DEFAULT_SETTINGS.discordClientId){
 if(state.settings.manualLoginEnabled !== false || state.settings.setupLocked !== true){
   state.settings.manualLoginEnabled = false;
   state.settings.setupLocked = true;
+  saveJSON(LS.settings, state.settings);
+}
+// Bake in the Render fulfillment server URL for browsers that saved empty settings.
+if(!state.settings.checkoutApiUrl && DEFAULT_SETTINGS.checkoutApiUrl){
+  state.settings.checkoutApiUrl = DEFAULT_SETTINGS.checkoutApiUrl;
+  state.settings.fulfillmentWebhook = DEFAULT_SETTINGS.fulfillmentWebhook;
   saveJSON(LS.settings, state.settings);
 }
 
@@ -665,7 +671,8 @@ window.__ysDismissAnnounce = false;
 // Must match an exact Redirect URI registered in Discord Developer Portal → OAuth2.
 const PRE_FILLED_CLIENT_ID = '1535016417940869140';
 const Discord = {
-  redirectUri(){ return 'https://yoloscripts.computervision.workers.dev/'; },
+  // Must match Discord Developer Portal → OAuth2 → Redirects exactly.
+  redirectUri(){ return 'https://yoloscripts.onrender.com/'; },
   authUrl(){
     const cid = state.settings.discordClientId || PRE_FILLED_CLIENT_ID;
     const params = new URLSearchParams({
