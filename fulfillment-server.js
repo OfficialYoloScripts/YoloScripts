@@ -183,25 +183,58 @@ function verifyDiscordInteraction(rawBody, signature, timestamp) {
   }
 }
 
+function formatPlanDollars(plan) {
+  return (Number(plan.priceCents || 0) / 100).toFixed(2);
+}
+
+function purchaseMenuPayload() {
+  const plans = licensePlans();
+  const week = plans.week;
+  const month = plans.month;
+  const four = plans.four_months;
+  return {
+    flags: 64, // ephemeral — only the buyer sees it
+    content:
+      '**Yolo license plans**\n' +
+      `• **1 Week** — $${formatPlanDollars(week)} (${week.days} days)\n` +
+      `• **1 Month** — $${formatPlanDollars(month)} (${month.days} days)\n` +
+      `• **4 Months** — $${formatPlanDollars(four)} (${four.days} days)\n\n` +
+      'Pick a plan below to get your Stripe payment link.',
+    components: [{
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 1,
+          label: `1 Week — $${formatPlanDollars(week)}`,
+          custom_id: 'yolo_buy:week'
+        },
+        {
+          type: 2,
+          style: 1,
+          label: `1 Month — $${formatPlanDollars(month)}`,
+          custom_id: 'yolo_buy:month'
+        },
+        {
+          type: 2,
+          style: 1,
+          label: `4 Months — $${formatPlanDollars(four)}`,
+          custom_id: 'yolo_buy:four_months'
+        }
+      ]
+    }]
+  };
+}
+
 async function registerPurchaseCommand() {
   if (!DISCORD_BOT_TOKEN || !DISCORD_CLIENT_ID || !DISCORD_GUILD_ID) {
     console.warn('[discord] /purchase not registered — missing bot token, client id, or guild id');
     return;
   }
+  // No plan option — /purchase shows priced buttons first.
   const body = [{
     name: 'purchase',
-    description: 'Buy a Yolo license (Stripe checkout link)',
-    options: [{
-      name: 'plan',
-      description: 'Choose how long you want access',
-      type: 3,
-      required: true,
-      choices: [
-        { name: '1 Week', value: 'week' },
-        { name: '1 Month', value: 'month' },
-        { name: '4 Months', value: 'four_months' }
-      ]
-    }]
+    description: 'View Yolo plan prices and buy a license'
   }];
   const url =
     `https://discord.com/api/v10/applications/${DISCORD_CLIENT_ID}/guilds/${DISCORD_GUILD_ID}/commands`;
@@ -280,7 +313,11 @@ async function handleDiscordInteractions(req, res) {
     return res.json({ type: 1 });
   }
 
-  // Slash command
+  const discordUserId =
+    (interaction.member && interaction.member.user && interaction.member.user.id) ||
+    (interaction.user && interaction.user.id);
+
+  // Slash command: show prices + plan buttons first.
   if (interaction.type === 2) {
     const name = interaction.data && interaction.data.name;
     if (name !== 'purchase') {
@@ -289,12 +326,19 @@ async function handleDiscordInteractions(req, res) {
         data: { content: 'Unknown command.', flags: 64 }
       });
     }
-    const opts = (interaction.data && interaction.data.options) || [];
-    const planOpt = opts.find((o) => o.name === 'plan');
-    const planKey = planOpt && planOpt.value;
-    const discordUserId =
-      (interaction.member && interaction.member.user && interaction.member.user.id) ||
-      (interaction.user && interaction.user.id);
+    return res.json({ type: 4, data: purchaseMenuPayload() });
+  }
+
+  // Button click: create Stripe checkout for the chosen plan.
+  if (interaction.type === 3) {
+    const customId = String((interaction.data && interaction.data.custom_id) || '');
+    if (!customId.startsWith('yolo_buy:')) {
+      return res.json({
+        type: 4,
+        data: { content: 'Unknown button.', flags: 64 }
+      });
+    }
+    const planKey = customId.slice('yolo_buy:'.length);
     if (!discordUserId) {
       return res.json({
         type: 4,
@@ -303,20 +347,21 @@ async function handleDiscordInteractions(req, res) {
     }
     try {
       const { url, plan } = await createDiscordPlanCheckout(planKey, discordUserId);
-      const dollars = (plan.priceCents / 100).toFixed(2);
+      const dollars = formatPlanDollars(plan);
+      // Update the ephemeral menu message with the pay link.
       return res.json({
-        type: 4,
+        type: 7,
         data: {
-          flags: 64,
           content:
-            `**Yolo — ${plan.label}** ($${dollars})\n` +
-            `Pay with Stripe, then open YOLO → Login with Discord.\n` +
+            `**Yolo — ${plan.label}** — $${dollars}\n` +
             `Access lasts **${plan.days} days** after payment.\n\n` +
-            `[Click here to pay](${url})`
+            `[Click here to pay securely with Stripe](${url})\n\n` +
+            'After paying, return here and open **YOLO → Login with Discord**.',
+          components: []
         }
       });
     } catch (err) {
-      console.error('[discord] /purchase error', err);
+      console.error('[discord] buy button error', err);
       return res.json({
         type: 4,
         data: {
