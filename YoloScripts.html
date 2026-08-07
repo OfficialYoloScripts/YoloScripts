@@ -183,12 +183,7 @@ nav.main-nav a:hover,nav.main-nav a.active{color:#fff;background:rgba(168,85,247
 .user-chip{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;background:rgba(168,85,247,.1);border:1px solid var(--border);cursor:pointer;}
 .user-chip img{width:28px;height:28px;border-radius:50%;}
 .user-chip span{font-weight:600;font-size:.85rem;}
-.mobile-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.5rem;cursor:pointer;}
-@media (max-width:920px){
-  nav.main-nav{display:none;}
-  .mobile-toggle{display:block;}
-  .brand .tagline{display:none;}
-}
+.mobile-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.35rem;cursor:pointer;}
 
 /* ============================= HERO ============================= */
 .hero{padding:90px 24px 70px;text-align:center;position:relative;}
@@ -347,7 +342,21 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
 }
 .upload-box:hover{border-color:var(--border-strong);background:rgba(168,85,247,.06);}
 .gallery-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-.gallery-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+.gallery-thumbs img{
+  width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);
+  cursor:pointer;transition:border-color .15s ease,transform .15s ease;
+}
+.gallery-thumbs img:hover,.gallery-thumbs img.active{border-color:var(--accent);transform:scale(1.04);}
+
+.pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
+.pd-media{height:340px;display:flex;align-items:center;justify-content:center;font-size:4rem;overflow:hidden;}
+.pd-media img{width:100%;height:100%;object-fit:cover;}
+.pd-actions{display:flex;gap:12px;flex-wrap:wrap;}
+.pd-title{font-size:1.9rem;margin:8px 0 14px;}
+.line-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;}
+.line-row .thumb{width:50px;height:50px;border-radius:8px;background:#1c0f38;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+.line-row .meta{flex:1;min-width:0;}
+.line-row .meta .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -355,12 +364,86 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
 .download-box{
   border:1px solid var(--success);background:rgba(168,85,247,.1);border-radius:12px;padding:18px;margin-top:14px;
 }
-.license-key{font-family:monospace;font-size:1rem;background:#04030c;padding:10px 14px;border-radius:8px;letter-spacing:.05em;display:inline-block;color:#fff;}
+.license-key{font-family:monospace;font-size:1rem;background:#04030c;padding:10px 14px;border-radius:8px;letter-spacing:.05em;display:inline-block;color:#fff;word-break:break-all;}
 
-@media(max-width:640px){
-  .modal-body{padding:22px;}
-  .hero{padding:60px 18px 44px;}
-  .stat-strip{gap:26px;}
+#mobile-nav{
+  display:none;flex-direction:column;gap:6px;padding:10px 20px 18px;
+  border-top:1px solid var(--border);background:rgba(5,3,16,.95);
+}
+#mobile-nav.open{display:flex;}
+#mobile-nav a{
+  padding:14px 16px;border-radius:12px;font-weight:700;font-size:1rem;
+  color:var(--text-dim);transition:background .15s ease,color .15s ease;
+}
+#mobile-nav a:hover,#mobile-nav a:active{background:rgba(168,85,247,.16);color:#fff;}
+.purchases-mobile{display:none;}
+.purchases-desktop{display:block;}
+
+@media (max-width:920px){
+  nav.main-nav{display:none;}
+  .mobile-toggle{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid var(--border);}
+  .brand .tagline{display:none;}
+  .nav-inner{padding:12px 16px;gap:10px;}
+  .header-actions{gap:6px;}
+  .user-chip{padding:4px;}
+  .user-chip span{display:none;}
+  .brand .name{font-size:1rem;}
+  .brand img{width:36px;height:36px;}
+  #auth-slot .btn{padding:8px 12px;font-size:.68rem;letter-spacing:.02em;}
+  .icon-btn,.dev-gear{width:36px;height:36px;font-size:1rem;}
+}
+
+@media (max-width:720px){
+  .wrap{padding:0 16px;}
+  section{padding:36px 16px;}
+  .hero{padding:48px 16px 36px;}
+  .hero h1{font-size:clamp(1.85rem,9vw,2.8rem);margin-bottom:14px;}
+  .hero p.sub{font-size:1rem;margin-bottom:22px;}
+  .hero .cta-row .btn{width:100%;max-width:320px;}
+  .stat-strip{gap:20px;margin-top:36px;}
+  .stat-strip .stat .num{font-size:1.5rem;}
+  .section-head{margin-bottom:20px;}
+  .section-head h2{font-size:1.45rem;}
+  .product-grid{grid-template-columns:1fr;gap:14px;}
+  .product-card .thumb{height:180px;}
+  .product-card .price-row{flex-wrap:wrap;gap:10px;}
+  .product-card .price-row .btn{width:100%;}
+  .pd-grid{grid-template-columns:1fr;gap:20px;}
+  .pd-media{height:220px;font-size:3rem;}
+  .pd-title{font-size:1.4rem;}
+  .pd-actions .btn{flex:1 1 100%;}
+  .btn{white-space:normal;text-align:center;line-height:1.25;}
+  .filter-bar{gap:8px;}
+  .search-box{min-width:100%;flex:1 1 100%;}
+  .footer-grid{grid-template-columns:1fr;gap:22px;}
+  footer{padding:36px 16px 22px;}
+  .modal{border-radius:16px;max-height:92vh;}
+  .modal.wide{max-width:100%;}
+  .modal-body{padding:22px 18px;}
+  .overlay{padding:12px;}
+  .drawer{width:100%;max-width:100vw;}
+  .drawer-head,.drawer-body,.drawer-foot{padding:16px;}
+  .line-row{align-items:flex-start;}
+  .line-row .meta .name{white-space:normal;}
+  .toast-stack{left:12px;right:12px;bottom:12px;max-width:none;}
+  .toast{animation:toastInMobile .25s ease;}
+  @keyframes toastInMobile{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .admin-grid{gap:16px;}
+  .admin-side{flex-direction:row;flex-wrap:wrap;gap:8px;}
+  .admin-side button{flex:1 1 auto;min-width:42%;text-align:center;padding:10px 12px;font-size:.82rem;}
+  .admin-table{font-size:.8rem;}
+  .admin-table th,.admin-table td{padding:10px 8px;}
+  .field-row{grid-template-columns:1fr;}
+  .empty-state{padding:48px 16px;}
+  .code-box{padding:12px 44px 12px 12px;font-size:.72rem;}
+  .purchases-mobile{display:block;}
+  .purchases-desktop{display:none !important;}
+}
+
+@media (max-width:400px){
+  .header-actions .icon-btn[title="Wishlist"]{display:none;}
+  .brand .name{font-size:.92rem;}
+  .hero .badge-row .pill{font-size:.65rem;}
 }
 </style>
 </head>
@@ -401,8 +484,11 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
       <button class="mobile-toggle" onclick="YS.toggleMobileNav()">☰</button>
     </div>
   </div>
-  <div id="mobile-nav" class="hidden" style="padding:10px 24px 18px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border);">
-    <a href="#/home">Home</a><a href="#/shop">Shop</a><a href="#/purchases">My Purchases</a>
+  <div id="mobile-nav" aria-label="Mobile navigation">
+    <a href="#/home" data-route="home">Home</a>
+    <a href="#/shop" data-route="shop">Shop</a>
+    <a href="#/purchases" data-route="purchases">My Purchases</a>
+    <a href="#/shop?featured=1">Featured</a>
   </div>
 </header>
 
@@ -430,7 +516,7 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
       <div>
         <h4>Community</h4>
         <a id="footer-discord-link" href="#" target="_blank" rel="noopener">Join Discord</a>
-        <a href="#" onclick="YS.toast('Support: reach us on Discord.','warn');return false;">Support</a>
+        <a id="footer-support-link" href="#" target="_blank" rel="noopener">Support</a>
       </div>
       <div>
         <h4>Store</h4>
@@ -489,6 +575,7 @@ function fmtMoney(n, cur){ try{ return new Intl.NumberFormat('en-US',{style:'cur
 function fmtDate(ts){ try{ return new Date(ts).toLocaleString(); }catch(e){ return ''; } }
 
 /* ============================= DEFAULT DATA ============================= */
+/* YS_BAKE_DEFAULT_SETTINGS_START */
 const DEFAULT_SETTINGS = {
   siteName:'YoloScripts',
   brandWord:'SCRIPTS',
@@ -532,9 +619,12 @@ const DEFAULT_SETTINGS = {
   setupLocked:true,
   manualLoginEnabled:false
 };
+/* YS_BAKE_DEFAULT_SETTINGS_END */
 
-// Empty by default — the store owner adds every product through Devmode.
+// Products baked here by Devmode → Danger Zone → Download for GitHub.
+/* YS_BAKE_DEMO_PRODUCTS_START */
 const DEMO_PRODUCTS = [];
+/* YS_BAKE_DEMO_PRODUCTS_END */
 
 /* ============================= STATE ============================= */
 const state = {
@@ -652,7 +742,25 @@ function applyTheme(){
   document.getElementById('brand-name').innerHTML = esc(state.settings.brandFirstWord||'YOLO')+' <span>'+esc(state.settings.brandWord||'SCRIPTS')+'</span>';
   document.getElementById('brand-tagline').textContent = state.settings.tagline||'';
   document.getElementById('footer-blurb').textContent = state.settings.footerBlurb||'';
-  document.getElementById('footer-discord-link').href = state.settings.discordInvite || '#';
+  const invite = (state.settings.discordInvite || '').trim();
+  const discordLink = document.getElementById('footer-discord-link');
+  const supportLink = document.getElementById('footer-support-link');
+  if(invite && invite !== '#' && !invite.includes('your-invite')){
+    discordLink.href = invite;
+    discordLink.target = '_blank';
+    discordLink.onclick = null;
+    supportLink.href = invite;
+    supportLink.target = '_blank';
+    supportLink.onclick = null;
+    supportLink.textContent = 'Support';
+  } else {
+    discordLink.href = '#';
+    discordLink.removeAttribute('target');
+    discordLink.onclick = function(e){ e.preventDefault(); toast('Discord invite not set yet — add it in Devmode → Integrations.','warn'); };
+    supportLink.href = '#';
+    supportLink.removeAttribute('target');
+    supportLink.onclick = function(e){ e.preventDefault(); toast('Support: add your Discord invite in Devmode → Integrations.','warn'); };
+  }
   document.getElementById('footer-year').textContent = new Date().getFullYear();
   const socialWrap = document.getElementById('footer-social');
   const socials = [];
@@ -665,7 +773,6 @@ function applyTheme(){
     bar.innerHTML = esc(state.settings.announcement)+' <button onclick="YS.dismissAnnounce()">✕</button>';
   } else bar.classList.add('hidden');
 }
-window.__ysDismissAnnounce = false;
 
 /* ============================= DISCORD OAUTH (implicit flow) ============================= */
 // Must match an exact Redirect URI registered in Discord Developer Portal → OAuth2.
@@ -729,12 +836,13 @@ function renderAuthSlot(){
   const slot = document.getElementById('auth-slot');
   if(state.session && state.session.discordUser){
     const u = state.session.discordUser;
-    slot.innerHTML = `<div class="user-chip" onclick="YS.openAccountMenu()">
+    slot.innerHTML = `<div class="user-chip" onclick="YS.openAccountMenu()" title="${esc(u.username)}">
       <img src="${u.avatar}" alt="">
       <span>${esc(u.username)}</span>
     </div>`;
   } else {
-    slot.innerHTML = `<button class="btn sm" onclick="Discord.login()">Login with Discord</button>`;
+    const short = window.matchMedia('(max-width:920px)').matches;
+    slot.innerHTML = `<button class="btn sm" onclick="Discord.login()">${short?'Login':'Login with Discord'}</button>`;
   }
 }
 function renderDevGear(){
@@ -777,7 +885,6 @@ function renderRoute(){
   window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
   document.getElementById('mobile-nav').classList.add('hidden');
 }
-window.addEventListener('hashchange', renderRoute);
 
 /* ============================= HOME VIEW ============================= */
 function viewHome(){
@@ -960,31 +1067,40 @@ function viewProductPage(slug){
 function productDetailMarkup(p){
   const inWishlist = state.wishlist.includes(p.id);
   const gallery = [p.image, ...(p.gallery||[])].filter(Boolean);
+  const mainSrc = gallery[0] || '';
+  const thumbs = gallery.map((g,i)=>`<img src="${g}" class="${i===0?'active':''}" alt="" onclick="YS.setGalleryImage(this)">`).join('');
   return `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;" class="pd-grid">
+  <div class="pd-grid">
     <div>
-      <div class="card" style="height:340px;display:flex;align-items:center;justify-content:center;font-size:4rem;overflow:hidden;">
-        ${gallery[0]?`<img src="${gallery[0]}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}
+      <div class="card pd-media" id="pd-main-media">
+        ${mainSrc?`<img src="${mainSrc}" alt="${esc(p.name)}">`:'🏀'}
       </div>
-      ${gallery.length>1?`<div class="gallery-thumbs">${gallery.slice(1).map(g=>`<img src="${g}">`).join('')}</div>`:''}
+      ${gallery.length>1?`<div class="gallery-thumbs">${thumbs}</div>`:''}
     </div>
     <div>
       <div class="cat">${esc(p.category||'Script')}</div>
-      <h1 style="font-size:1.9rem;margin:8px 0 14px;">${esc(p.name)}</h1>
+      <h1 class="pd-title">${esc(p.name)}</h1>
       <div style="margin-bottom:18px;">
         ${p.compareAtPrice>0?`<span class="price compare">${fmtMoney(p.compareAtPrice,state.settings.currency)}</span>`:''}
         <span class="price" style="font-size:1.7rem;">${fmtMoney(p.price,state.settings.currency)}</span>
       </div>
       <p style="color:var(--text-dim);margin-bottom:22px;white-space:pre-line;">${esc(p.description||'')}</p>
       ${p.discordRoleName?`<div class="pill" style="margin-bottom:18px;">🎖️ Grants role: ${esc(p.discordRoleName)}</div>`:''}
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="pd-actions">
         <button class="btn" onclick="YS.buyNow('${p.id}')">💳 Buy Now — ${fmtMoney(p.price,state.settings.currency)}</button>
         <button class="btn ghost" onclick="YS.addToCart('${p.id}')">🛒 Add to Cart</button>
-        <button class="icon-btn ${inWishlist?'wish-toggle active':''}" style="${inWishlist?'color:#f43f5e;border-color:#f43f5e;':''}" onclick="YS.toggleWishlist('${p.id}')">♥</button>
+        <button class="icon-btn ${inWishlist?'wish-toggle active':''}" style="${inWishlist?'color:#f43f5e;border-color:#f43f5e;':''}" onclick='YS.toggleWishlist(${JSON.stringify(p.id)});if(document.getElementById("modal-overlay").classList.contains("open"))YS.openProduct(${JSON.stringify(p.slug)});else if(YS.renderRoute)YS.renderRoute();'>♥</button>
       </div>
       ${!p.stripeLink ? `<p class="hint" style="margin-top:14px;color:var(--warning);">⚠️ Payment link not configured yet for this product.</p>` : ''}
     </div>
   </div>`;
+}
+function setGalleryImage(el){
+  const media = document.getElementById('pd-main-media') || (el && el.closest('.pd-grid') && el.closest('.pd-grid').querySelector('.pd-media'));
+  if(!media || !el || !el.src) return;
+  media.innerHTML = `<img src="${el.src}" alt="">`;
+  const thumbs = el.parentElement ? el.parentElement.querySelectorAll('img') : [];
+  thumbs.forEach(t=>t.classList.toggle('active', t===el));
 }
 
 /* ============================= MODAL / DRAWER PLUMBING ============================= */
@@ -1029,10 +1145,14 @@ function openWishlist(){
     <div class="drawer-head"><h3>Wishlist</h3><div class="modal-close" onclick="YS.closeDrawer()">✕</div></div>
     <div class="drawer-body">
       ${items.length? items.map(p=>`
-        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;">
-          <div style="width:50px;height:50px;border-radius:8px;background:#1c0f38;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${p.image?`<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}</div>
-          <div style="flex:1;"><div style="font-weight:700;">${esc(p.name)}</div><div class="price">${fmtMoney(p.price,state.settings.currency)}</div></div>
-          <button class="btn sm ghost" onclick="YS.toggleWishlist('${p.id}');YS.openWishlist()">Remove</button>
+        <div class="line-row">
+          <div class="thumb">${p.image?`<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;" alt="">`:'🏀'}</div>
+          <div class="meta"><div class="name">${esc(p.name)}</div><div class="price">${fmtMoney(p.price,state.settings.currency)}</div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+              <button class="btn sm" onclick="YS.buyNow('${p.id}')">Buy</button>
+              <button class="btn sm ghost" onclick="YS.toggleWishlist('${p.id}');YS.openWishlist()">Remove</button>
+            </div>
+          </div>
         </div>`).join('') : `<p style="color:var(--text-faint);">Your wishlist is empty.</p>`}
     </div>`);
 }
@@ -1046,19 +1166,24 @@ function openCart(){
     <div class="drawer-head"><h3>Your Cart</h3><div class="modal-close" onclick="YS.closeDrawer()">✕</div></div>
     <div class="drawer-body">
       ${items.length? items.map(c=>`
-        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;">
-          <div style="width:50px;height:50px;border-radius:8px;background:#1c0f38;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${c.product.image?`<img src="${c.product.image}" style="width:100%;height:100%;object-fit:cover;">`:'🏀'}</div>
-          <div style="flex:1;"><div style="font-weight:700;">${esc(c.product.name)}</div><div class="price">${fmtMoney(c.product.price,state.settings.currency)} × ${c.qty}</div></div>
-          <button class="btn sm ghost" onclick="YS.removeFromCart('${c.productId}')">✕</button>
+        <div class="line-row">
+          <div class="thumb">${c.product.image?`<img src="${c.product.image}" style="width:100%;height:100%;object-fit:cover;" alt="">`:'🏀'}</div>
+          <div class="meta">
+            <div class="name">${esc(c.product.name)}</div>
+            <div class="price">${fmtMoney(c.product.price,state.settings.currency)} × ${c.qty}</div>
+            <button class="btn sm ghost" style="margin-top:8px;" onclick="YS.removeFromCart('${c.productId}')">Remove</button>
+          </div>
         </div>`).join('') : `<p style="color:var(--text-faint);">Your cart is empty.</p>`}
-      ${!hasServer && items.length ? `<p class="hint" style="margin-top:14px;">No checkout server connected — check out items individually below using each item's own payment link.</p>
+      ${!hasServer && items.length ? `<p class="hint" style="margin-top:14px;">Buy each item with its Stripe link, or connect the checkout server in Devmode for one-click cart checkout.</p>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-        ${items.map(c=>`<button class="btn sm ghost block" onclick="YS.buyNow('${c.productId}')">Buy ${esc(c.product.name)} — ${fmtMoney(c.product.price,state.settings.currency)}</button>`).join('')}
+        ${items.map(c=>`<button class="btn sm block" onclick="YS.buyNow('${c.productId}')">Buy ${esc(c.product.name)} — ${fmtMoney(c.product.price*c.qty,state.settings.currency)}</button>`).join('')}
         </div>` : ''}
     </div>
     <div class="drawer-foot">
       <div class="kv-row" style="font-size:1rem;"><span>Total</span><span style="font-weight:800;">${fmtMoney(cartTotal(),state.settings.currency)}</span></div>
-      <button class="btn block" style="margin-top:12px;" ${items.length?'':'disabled'} onclick="YS.checkout()">${hasServer?'Checkout with Stripe':'Checkout'}</button>
+      ${hasServer
+        ? `<button class="btn block" style="margin-top:12px;" ${items.length?'':'disabled'} onclick="YS.checkout()">Checkout with Stripe</button>`
+        : `<button class="btn block ghost" style="margin-top:12px;" disabled title="Uses individual buy buttons above">Cart checkout needs server</button>`}
     </div>`);
 }
 function requireLoginToBuy(){
@@ -1127,9 +1252,26 @@ function viewPurchases(){
     </section>`;
   }
   const mine = state.orders.filter(o=>o.discordUser && o.discordUser.id===state.session.discordUser.id).sort((a,b)=>b.createdAt-a.createdAt);
+  const cards = mine.map(o=>{
+    const p = state.products.find(x=>x.id===o.productId);
+    const expiry = o.roleExpiresAt ? (o.roleExpiresAt>Date.now() ? `Expires ${fmtDate(o.roleExpiresAt)}` : `<span style="color:var(--danger);">Expired</span>`) : (p&&p.discordRoleId?'Lifetime':'—');
+    const downloadUrl = (o.status==='fulfilled' && p && p.fileUrl) ? p.fileUrl : '';
+    return `<div class="card" style="padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:800;font-size:1.05rem;">${esc(o.productName|| (p&&p.name) || 'Product')}</div>
+          <div class="hint" style="margin-top:4px;">${fmtDate(o.createdAt)} · ${fmtMoney(o.amount,state.settings.currency)}</div>
+          <div style="margin-top:8px;"><span class="status-dot ${o.status==='fulfilled'?'active':'inactive'}">${esc(o.status||'pending')}</span></div>
+          <div class="hint" style="margin-top:6px;">Role: ${expiry}</div>
+        </div>
+        ${downloadUrl?`<a class="btn sm" href="${esc(downloadUrl)}" target="_blank" rel="noopener">⬇ Download</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
   return `<section class="wrap" style="padding-top:50px;">
     <div class="section-head"><div><h2>My Purchases</h2><p>Purchase history stored on this device. Connect a fulfillment server for cross-device history.</p></div></div>
-    ${mine.length ? `<div class="card" style="overflow-x:auto;"><table class="admin-table">
+    ${mine.length ? `<div class="purchases-mobile">${cards}</div>
+    <div class="card purchases-desktop" style="overflow-x:auto;"><table class="admin-table">
       <thead><tr><th>Product</th><th>Status</th><th>Amount</th><th>Date</th><th>Role Access</th><th></th></tr></thead>
       <tbody>${mine.map(o=>{
         const p = state.products.find(x=>x.id===o.productId);
@@ -1165,7 +1307,13 @@ function showSuccessModal(productSlug, sessionId){
       <div id="fulfill-status" class="card" style="padding:18px;text-align:left;">
         <div style="display:flex;align-items:center;gap:10px;"><div class="spinner"></div><span>Verifying payment &amp; preparing your download...</span></div>
       </div>
-      <a class="btn ghost" style="margin-top:18px;" href="${esc(state.settings.discordInvite||'#')}" target="_blank">💬 Join our Discord for support</a>
+      ${(()=>{
+        const inv = (state.settings.discordInvite||'').trim();
+        if(inv && inv !== '#' && !inv.includes('your-invite')){
+          return `<a class="btn ghost" style="margin-top:18px;" href="${esc(inv)}" target="_blank" rel="noopener">💬 Join our Discord for support</a>`;
+        }
+        return `<button class="btn ghost" style="margin-top:18px;" type="button" onclick="YS.toast('Discord invite not set yet.','warn')">💬 Discord support</button>`;
+      })()}
     </div>`, {});
 }
 async function fulfill(sessionId, productSlug){
@@ -1227,17 +1375,20 @@ function fallbackFulfill(product, sessionId, discordUser, statusBox){
   }
   // best-effort email via EmailJS if configured
   const buyerEmail = discordUser && discordUser.email;
-  let emailSent = false;
   if(state.settings.emailjsServiceId && state.settings.emailjsPublicKey && state.settings.emailjsTemplateId && buyerEmail){
     loadEmailJS().then(()=>{
       try{
         emailjs.init(state.settings.emailjsPublicKey);
-        emailjs.send(state.settings.emailjsServiceId, state.settings.emailjsTemplateId, {
+        return emailjs.send(state.settings.emailjsServiceId, state.settings.emailjsTemplateId, {
           to_email: buyerEmail, product_name: product.name, download_url: downloadUrl||'', discord_user: discordUser.username
         });
       }catch(e){ console.warn('EmailJS send failed', e); }
-    });
-    emailSent = true;
+    }).then(function(r){
+      if(r && statusBox){
+        const note = statusBox.querySelector('.email-note');
+        if(note) note.textContent = '📧 Confirmation email sent.';
+      }
+    }).catch(function(e){ console.warn('EmailJS send failed', e); });
   }
   if(statusBox) statusBox.innerHTML = `
     <p style="color:var(--warning);font-weight:700;margin-bottom:8px;">⚠️ No fulfillment server connected — delivering on an honor-system basis.</p>
@@ -1245,7 +1396,7 @@ function fallbackFulfill(product, sessionId, discordUser, statusBox){
       ${downloadUrl?`<a class="btn sm" style="margin-top:8px;" href="${esc(downloadUrl)}" target="_blank">⬇ Download</a>`:'<span class="hint">No file configured — devmode owner needs to add a download link.</span>'}
       ${keyHtml}
     </div>
-    <p class="hint" style="margin-top:10px;">${product.discordRoleName?`Your <b>${esc(product.discordRoleName)}</b> role will be added manually or automatically if a Discord bot is connected — ping us in Discord if it's missing.`:''} ${emailSent?'📧 Confirmation email sent.':''}</p>`;
+    <p class="hint" style="margin-top:10px;">${product.discordRoleName?`Your <b>${esc(product.discordRoleName)}</b> role will be added manually or automatically if a Discord bot is connected — ping us in Discord if it's missing.`:''} <span class="email-note"></span></p>`;
 }
 function loadEmailJS(){
   return new Promise((resolve,reject)=>{
@@ -1276,17 +1427,6 @@ function viewDevLocked(){
     <p style="color:var(--text-faint);max-width:420px;margin:0 auto 22px;">Log in with Discord to continue.</p>
     <button class="btn" onclick="Discord.login()">Login with Discord</button>
   </section>`;
-}
-function manualDiscordLogin(){
-  // Permanently disabled — Devmode requires real Discord OAuth as the owner.
-  toast('Manual Discord ID login is disabled. Use Login with Discord.', 'error');
-}
-function bootstrapClientIdAndLogin(){
-  const val = document.getElementById('bootstrap-client-id').value.trim();
-  if(!val){ toast('Paste your Discord Client ID first.', 'error'); return; }
-  state.settings.discordClientId = val;
-  persist();
-  Discord.login();
 }
 function openAccountMenu(){
   const u = state.session.discordUser;
@@ -1716,9 +1856,16 @@ async function syncToServer(){
 /* ---- Danger zone ---- */
 function devDanger(){
   return `
+  <div class="card" style="padding:24px;border-color:var(--accent);margin-bottom:20px;">
+    <h3 style="margin-bottom:10px;">⬇ Download Full Website for GitHub</h3>
+    <p class="hint" style="margin-bottom:16px;">Builds a ZIP with <b>index.html</b>, <b>YoloScripts.html</b>, server files, and all your Devmode changes baked into the HTML. Unzip → upload every file into your GitHub repo → Render redeploys. Do this whenever you change the site.</p>
+    <button class="btn" onclick="YS.downloadGithubBundle()">⬇ Download GitHub Upload ZIP</button>
+    <p class="hint" style="margin-top:12px;">Also downloads a single baked <code>index.html</code> if you only need the storefront file.</p>
+    <button class="btn sm ghost" style="margin-top:8px;" onclick="YS.downloadBakedHtml()">⬇ Download index.html only</button>
+  </div>
   <div class="card" style="padding:24px;border-color:var(--danger);margin-bottom:20px;">
     <h3 style="color:var(--danger);margin-bottom:10px;">Export / Import Store Data</h3>
-    <p class="hint" style="margin-bottom:16px;">This store's data lives in this browser only. Back it up regularly.</p>
+    <p class="hint" style="margin-bottom:16px;">JSON backup of settings/products/orders for this browser (not a full GitHub package).</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button class="btn sm ghost" onclick="YS.exportData()">⬇ Export JSON Backup</button>
       <button class="btn sm ghost" onclick="document.getElementById('import-file').click()">⬆ Import JSON Backup</button>
@@ -1732,7 +1879,7 @@ function devDanger(){
   </div>`;
 }
 function exportData(){
-  const data = { settings:state.settings, products:state.products, orders:state.orders, licensePools:state.licensePools, exportedAt:Date.now() };
+  const data = { settings:state.settings, products:state.products, orders:state.orders, licensePools:state.licensePools, subscribers:state.subscribers, exportedAt:Date.now() };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'yoloscripts-backup-'+Date.now()+'.json'; a.click();
@@ -1748,6 +1895,7 @@ function importData(ev){
       if(data.products) state.products = data.products;
       if(data.orders) state.orders = data.orders;
       if(data.licensePools) state.licensePools = data.licensePools;
+      if(data.subscribers) state.subscribers = data.subscribers;
       persist(); applyTheme(); renderDevGear(); renderRoute();
       toast('Backup imported successfully.', 'success');
     }catch(e){ toast('Invalid backup file.', 'error'); }
@@ -1761,20 +1909,179 @@ function wipeAll(){
   location.reload();
 }
 
+function bakeSettingsForHtml(){
+  // Never bake secrets into a file that goes on public GitHub.
+  const s = Object.assign({}, state.settings, {
+    setupLocked: true,
+    manualLoginEnabled: false,
+    stripeSecretKey: '',
+    adminApiKey: ''
+  });
+  return s;
+}
+function bakeHtmlSource(html){
+  const settingsJson = JSON.stringify(bakeSettingsForHtml(), null, 2);
+  const productsJson = JSON.stringify(state.products || [], null, 2);
+  let out = html;
+  if(/\/\* YS_BAKE_DEFAULT_SETTINGS_START \*\//.test(out)){
+    out = out.replace(
+      /\/\* YS_BAKE_DEFAULT_SETTINGS_START \*\/[\s\S]*?\/\* YS_BAKE_DEFAULT_SETTINGS_END \*\//,
+      '/* YS_BAKE_DEFAULT_SETTINGS_START */\nconst DEFAULT_SETTINGS = '+settingsJson+';\n/* YS_BAKE_DEFAULT_SETTINGS_END */'
+    );
+  } else {
+    out = out.replace(/const DEFAULT_SETTINGS = \{[\s\S]*?\n\};/, 'const DEFAULT_SETTINGS = '+settingsJson+';');
+  }
+  if(/\/\* YS_BAKE_DEMO_PRODUCTS_START \*\//.test(out)){
+    out = out.replace(
+      /\/\* YS_BAKE_DEMO_PRODUCTS_START \*\/[\s\S]*?\/\* YS_BAKE_DEMO_PRODUCTS_END \*\//,
+      '/* YS_BAKE_DEMO_PRODUCTS_START */\nconst DEMO_PRODUCTS = '+productsJson+';\n/* YS_BAKE_DEMO_PRODUCTS_END */'
+    );
+  } else {
+    out = out.replace(/const DEMO_PRODUCTS = \[[\s\S]*?\];/, 'const DEMO_PRODUCTS = '+productsJson+';');
+  }
+  return out;
+}
+async function fetchText(path){
+  const res = await fetch(path, { cache:'no-store' });
+  if(!res.ok) throw new Error('Could not fetch '+path+' ('+res.status+')');
+  return res.text();
+}
+async function fetchBlob(path){
+  const res = await fetch(path, { cache:'no-store' });
+  if(!res.ok) throw new Error('Could not fetch '+path+' ('+res.status+')');
+  return res.blob();
+}
+function triggerDownload(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+async function loadJSZip(){
+  if(window.JSZip) return window.JSZip;
+  await new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = resolve;
+    s.onerror = ()=>reject(new Error('Failed to load JSZip'));
+    document.head.appendChild(s);
+  });
+  return window.JSZip;
+}
+async function getBakedHtml(){
+  // Prefer fetching the live file so we bake into the real source, not a DOM serialization.
+  const path = location.pathname.endsWith('/') ? '/index.html' : location.pathname;
+  let html;
+  try { html = await fetchText(path); }
+  catch(e){ html = await fetchText('/index.html'); }
+  return bakeHtmlSource(html);
+}
+async function downloadBakedHtml(){
+  try{
+    toast('Building baked index.html…', 'warn');
+    const html = await getBakedHtml();
+    triggerDownload(new Blob([html], {type:'text/html;charset=utf-8'}), 'index.html');
+    toast('Downloaded index.html — upload this to GitHub (and copy as YoloScripts.html too).', 'success');
+  }catch(err){
+    console.error(err);
+    toast('Download failed: '+(err.message||err), 'error');
+  }
+}
+async function downloadGithubBundle(){
+  try{
+    toast('Building GitHub ZIP (this may take a few seconds)…', 'warn');
+    const JSZip = await loadJSZip();
+    const zip = new JSZip();
+    const folder = zip.folder('upload-to-github');
+    const baked = await getBakedHtml();
+    folder.file('index.html', baked);
+    folder.file('YoloScripts.html', baked);
+
+    const optionalText = [
+      'fulfillment-server.js','package.json','package-lock.json',
+      'README.md','SETUP-GUIDE.md','render.yaml','.env.example','.gitignore'
+    ];
+    for(const name of optionalText){
+      try { folder.file(name, await fetchText('/'+name)); }
+      catch(e){ console.warn('Skip', name, e); }
+    }
+    try { folder.file('YOLO.ico', await fetchBlob('/YOLO.ico')); }
+    catch(e){ console.warn('Skip YOLO.ico', e); }
+
+    // Private browser backup (includes orders) — keep for you; safe to omit from public if you want.
+    folder.file('yoloscripts-browser-backup.json', JSON.stringify({
+      settings: bakeSettingsForHtml(),
+      products: state.products,
+      orders: state.orders,
+      licensePools: state.licensePools,
+      subscribers: state.subscribers,
+      exportedAt: Date.now()
+    }, null, 2));
+
+    folder.file('HOW-TO-UPLOAD.txt', [
+      'YoloScripts — upload this folder to GitHub',
+      '=========================================',
+      '',
+      '1. Unzip this file.',
+      '2. Open the upload-to-github folder.',
+      '3. Upload ALL files inside it into your GitHub repo',
+      '   (OfficialYoloScripts/YoloScripts), replacing old copies.',
+      '4. Render will auto-redeploy.',
+      '5. Keep ADMIN_KEY / Stripe secrets in Render Environment only',
+      '   — they are intentionally blank in the baked HTML.',
+      '',
+      'Generated: '+new Date().toISOString(),
+      'Products baked: '+(state.products||[]).length,
+      ''
+    ].join('\n'));
+
+    const blob = await zip.generateAsync({ type:'blob' });
+    triggerDownload(blob, 'yoloscripts-github-upload-'+Date.now()+'.zip');
+    toast('ZIP ready — unzip and upload everything in upload-to-github to GitHub.', 'success');
+  }catch(err){
+    console.error(err);
+    toast('ZIP failed: '+(err.message||err)+' — try "Download index.html only".', 'error');
+  }
+}
+
 /* ============================= NAV HELPER ============================= */
 function nav(route, opts){ navTo(route, opts); }
-function toggleMobileNav(){ document.getElementById('mobile-nav').classList.toggle('hidden'); }
+function closeMobileNav(){
+  const m = document.getElementById('mobile-nav');
+  if(m) m.classList.remove('open');
+}
+function toggleMobileNav(){
+  const m = document.getElementById('mobile-nav');
+  if(m) m.classList.toggle('open');
+}
 function dismissAnnounce(){ state.settings.announcementEnabled = false; persist(); applyTheme(); }
 
 /* ============================= BOOT ============================= */
 window.YS = {
   nav, toast, openProduct, buyNow, addToCart, removeFromCart, toggleWishlist, openWishlist, openCart, checkout,
-  closeModal, closeDrawer, openAccountMenu, bootstrapClientIdAndLogin, manualDiscordLogin,
+  closeModal, closeDrawer, openAccountMenu, setGalleryImage,
   openProductForm, saveProduct, deleteProduct, handleImageUpload, handleLogoUpload,
   saveSettings, saveIntegrations, syncToServer, refreshOrdersFromServer,
   addTestimonial, updateTestimonial, removeTestimonial, exportSubscribers, subscribeNewsletter,
-  exportData, importData, wipeAll, toggleMobileNav, dismissAnnounce, renderRoute
+  exportData, importData, wipeAll, downloadBakedHtml, downloadGithubBundle,
+  toggleMobileNav, dismissAnnounce, renderRoute
 };
+
+window.addEventListener('hashchange', function(){
+  closeMobileNav();
+  renderRoute();
+});
+window.addEventListener('resize', function(){
+  if(!state.session) renderAuthSlot();
+});
+document.addEventListener('click', function(e){
+  const nav = document.getElementById('mobile-nav');
+  const toggle = document.querySelector('.mobile-toggle');
+  if(!nav || !nav.classList.contains('open')) return;
+  if(nav.contains(e.target) || (toggle && toggle.contains(e.target))) return;
+  closeMobileNav();
+});
 
 document.addEventListener('DOMContentLoaded', async function(){
   applyTheme();
@@ -1784,6 +2091,12 @@ document.addEventListener('DOMContentLoaded', async function(){
   await Discord.handleRedirect();
   await handleReturnFromStripe();
   renderRoute();
+  const mobileNav = document.getElementById('mobile-nav');
+  if(mobileNav){
+    mobileNav.querySelectorAll('a').forEach(a=>{
+      a.addEventListener('click', closeMobileNav);
+    });
+  }
 });
 
 })();
