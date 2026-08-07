@@ -25,6 +25,7 @@ const nodemailer = require('nodemailer');
 const Stripe = require('stripe');
 
 const crypto = require('crypto');
+const nacl = require('tweetnacl');
 
 const PORT = process.env.PORT || 4242;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
@@ -34,6 +35,7 @@ const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
 const DISCORD_CLIENT_ID = String(process.env.DISCORD_CLIENT_ID || '').trim();
 const DISCORD_CLIENT_SECRET = String(process.env.DISCORD_CLIENT_SECRET || '').trim();
+const DISCORD_PUBLIC_KEY = String(process.env.DISCORD_PUBLIC_KEY || '').trim();
 const DISCORD_REQUIRED_ROLE_IDS = String(process.env.DISCORD_REQUIRED_ROLE_IDS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 // Accept OWNER_DISCORD_IDS (preferred) or singular OWNER_DISCORD_ID from Render.
@@ -52,14 +54,26 @@ const LICENSE_BINDINGS_FILE = path.join(DATA_DIR, 'license_bindings.json');
 const TAMPER_REPORTS_FILE = path.join(DATA_DIR, 'tamper_reports.json');
 const BAN_LIST_FILE = path.join(DATA_DIR, 'ban_list.json');
 const HW_BINDINGS_FILE = path.join(DATA_DIR, 'hardware_bindings.json');
+const IDENTITY_GRAPH_FILE = path.join(DATA_DIR, 'identity_graph.json');
+const EMPTY_BANS = {
+  machines: {},
+  discordIds: {},
+  capture: {},
+  consoleHosts: {},
+  ips: {},
+  fingerprints: {}
+};
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRODUCTS_FILE)) fs.writeFileSync(PRODUCTS_FILE, '[]');
 if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]');
 if (!fs.existsSync(DESKTOP_SESSIONS_FILE)) fs.writeFileSync(DESKTOP_SESSIONS_FILE, '{}');
 if (!fs.existsSync(LICENSE_BINDINGS_FILE)) fs.writeFileSync(LICENSE_BINDINGS_FILE, '{}');
 if (!fs.existsSync(TAMPER_REPORTS_FILE)) fs.writeFileSync(TAMPER_REPORTS_FILE, '[]');
-if (!fs.existsSync(BAN_LIST_FILE)) fs.writeFileSync(BAN_LIST_FILE, '{"machines":{},"discordIds":{},"capture":{},"consoleHosts":{}}');
+if (!fs.existsSync(BAN_LIST_FILE)) fs.writeFileSync(BAN_LIST_FILE, JSON.stringify(EMPTY_BANS));
 if (!fs.existsSync(HW_BINDINGS_FILE)) fs.writeFileSync(HW_BINDINGS_FILE, '{"capture":{},"consoleHosts":{}}');
+if (!fs.existsSync(IDENTITY_GRAPH_FILE)) {
+  fs.writeFileSync(IDENTITY_GRAPH_FILE, JSON.stringify({ clusters: {}, index: {} }));
+}
 
 // In-memory cache only (Render free tier can sleep / change instances mid-login).
 // Real continuity comes from a signed Discord `state` payload below.
@@ -99,7 +113,8 @@ function verifyDesktopState(state) {
     return {
       port,
       machineId: String(payload.machineId || '').trim().toLowerCase(),
-      createdAt
+      createdAt,
+      fingerprints: normalizeFpList(payload.fingerprints || [])
     };
   } catch (_) {
     return null;
@@ -125,13 +140,208 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+/* ------------------------------------------------------------------
+   Discord /purchase plans (1 week / 1 month / 4 months)
+   Role IDs fall back to DISCORD_REQUIRED_ROLE_IDS in order: week, month, 4mo.
+------------------------------------------------------------------ */
+function licensePlans() {
+  const roles = DISCORD_REQUIRED_ROLE_IDS.slice();
+  return {
+    week: {
+      key: 'week',
+      label: '1 Week',
+      days: 7,
+      roleId: String(process.env.YOLO_PLAN_WEEK_ROLE_ID || roles[0] || '').trim(),
+      priceCents: Math.max(50, Number(process.env.YOLO_PLAN_WEEK_PRICE_CENTS || 999))
+    },
+    month: {
+      key: 'month',
+      label: '1 Month',
+      days: 30,
+      roleId: String(process.env.YOLO_PLAN_MONTH_ROLE_ID || roles[1] || roles[0] || '').trim(),
+      priceCents: Math.max(50, Number(process.env.YOLO_PLAN_MONTH_PRICE_CENTS || 2499))
+    },
+    four_months: {
+      key: 'four_months',
+      label: '4 Months',
+      days: 120,
+      roleId: String(process.env.YOLO_PLAN_FOUR_ROLE_ID || roles[2] || roles[0] || '').trim(),
+      priceCents: Math.max(50, Number(process.env.YOLO_PLAN_FOUR_PRICE_CENTS || 6999))
+    }
+  };
+}
+
+function verifyDiscordInteraction(rawBody, signature, timestamp) {
+  if (!DISCORD_PUBLIC_KEY || !signature || !timestamp) return false;
+  try {
+    const msg = Buffer.from(String(timestamp) + rawBody);
+    const sig = Buffer.from(String(signature), 'hex');
+    const key = Buffer.from(DISCORD_PUBLIC_KEY, 'hex');
+    return nacl.sign.detached.verify(msg, sig, key);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function registerPurchaseCommand() {
+  if (!DISCORD_BOT_TOKEN || !DISCORD_CLIENT_ID || !DISCORD_GUILD_ID) {
+    console.warn('[discord] /purchase not registered — missing bot token, client id, or guild id');
+    return;
+  }
+  const body = [{
+    name: 'purchase',
+    description: 'Buy a Yolo license (Stripe checkout link)',
+    options: [{
+      name: 'plan',
+      description: 'Choose how long you want access',
+      type: 3,
+      required: true,
+      choices: [
+        { name: '1 Week', value: 'week' },
+        { name: '1 Month', value: 'month' },
+        { name: '4 Months', value: 'four_months' }
+      ]
+    }]
+  }];
+  const url =
+    `https://discord.com/api/v10/applications/${DISCORD_CLIENT_ID}/guilds/${DISCORD_GUILD_ID}/commands`;
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[discord] failed to register /purchase', res.status, text.slice(0, 300));
+      return;
+    }
+    console.log('[discord] /purchase registered for guild', DISCORD_GUILD_ID);
+  } catch (err) {
+    console.error('[discord] register /purchase error', err.message || err);
+  }
+}
+
+async function createDiscordPlanCheckout(planKey, discordUserId) {
+  if (!stripe) throw new Error('Stripe is not configured on the server.');
+  const plans = licensePlans();
+  const plan = plans[planKey];
+  if (!plan || !plan.roleId) {
+    throw new Error('That plan is not configured. Ask the owner to set role IDs on Render.');
+  }
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: 'usd',
+        unit_amount: plan.priceCents,
+        product_data: {
+          name: `Yolo — ${plan.label}`,
+          description: `${plan.days}-day Yolo desktop license`
+        }
+      }
+    }],
+    success_url: `${SITE_ORIGIN}/?ys_discord_paid=1&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${SITE_ORIGIN}/?ys_discord_cancel=1`,
+    client_reference_id: String(discordUserId),
+    metadata: {
+      source: 'discord_purchase',
+      discordId: String(discordUserId),
+      plan: plan.key,
+      roleId: plan.roleId,
+      days: String(plan.days),
+      planName: `Yolo — ${plan.label}`
+    }
+  });
+  return { url: session.url, plan };
+}
+
+async function handleDiscordInteractions(req, res) {
+  const signature = req.get('x-signature-ed25519');
+  const timestamp = req.get('x-signature-timestamp');
+  const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
+  if (!verifyDiscordInteraction(rawBody, signature, timestamp)) {
+    return res.status(401).send('invalid request signature');
+  }
+
+  let interaction;
+  try {
+    interaction = JSON.parse(rawBody);
+  } catch (_) {
+    return res.status(400).send('bad json');
+  }
+
+  // Discord ping
+  if (interaction.type === 1) {
+    return res.json({ type: 1 });
+  }
+
+  // Slash command
+  if (interaction.type === 2) {
+    const name = interaction.data && interaction.data.name;
+    if (name !== 'purchase') {
+      return res.json({
+        type: 4,
+        data: { content: 'Unknown command.', flags: 64 }
+      });
+    }
+    const opts = (interaction.data && interaction.data.options) || [];
+    const planOpt = opts.find((o) => o.name === 'plan');
+    const planKey = planOpt && planOpt.value;
+    const discordUserId =
+      (interaction.member && interaction.member.user && interaction.member.user.id) ||
+      (interaction.user && interaction.user.id);
+    if (!discordUserId) {
+      return res.json({
+        type: 4,
+        data: { content: 'Could not read your Discord user.', flags: 64 }
+      });
+    }
+    try {
+      const { url, plan } = await createDiscordPlanCheckout(planKey, discordUserId);
+      const dollars = (plan.priceCents / 100).toFixed(2);
+      return res.json({
+        type: 4,
+        data: {
+          flags: 64,
+          content:
+            `**Yolo — ${plan.label}** ($${dollars})\n` +
+            `Pay with Stripe, then open YOLO → Login with Discord.\n` +
+            `Access lasts **${plan.days} days** after payment.\n\n` +
+            `[Click here to pay](${url})`
+        }
+      });
+    } catch (err) {
+      console.error('[discord] /purchase error', err);
+      return res.json({
+        type: 4,
+        data: {
+          flags: 64,
+          content: `Could not start checkout: ${err.message || 'try again later'}`
+        }
+      });
+    }
+  }
+
+  return res.json({ type: 4, data: { content: 'Unsupported interaction.', flags: 64 } });
+}
+
 const app = express();
 app.use(cors());
-// Stripe webhook needs the raw body, so it's mounted BEFORE the JSON parser.
+// Raw-body routes BEFORE the JSON parser (Stripe + Discord signatures).
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post('/api/discord/interactions', express.raw({ type: 'application/json' }), handleDiscordInteractions);
 app.use(express.json({ limit: '5mb' }));
 
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/health', (req, res) => res.json({
+  ok: true,
+  discordPurchase: !!(DISCORD_BOT_TOKEN && DISCORD_CLIENT_ID && DISCORD_GUILD_ID && DISCORD_PUBLIC_KEY && stripe),
+  stripe: !!stripe
+}));
 
 /* ------------------------------------------------------------------
    DESKTOP UPDATE MANIFEST
@@ -176,29 +386,69 @@ function isOwner(discordId) {
 
 function readBans() {
   const obj = readJSON(BAN_LIST_FILE);
-  return obj && typeof obj === 'object' && !Array.isArray(obj)
-    ? obj
-    : { machines: {}, discordIds: {}, capture: {}, consoleHosts: {} };
+  const base = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+  return {
+    machines: base.machines || {},
+    discordIds: base.discordIds || {},
+    capture: base.capture || {},
+    consoleHosts: base.consoleHosts || {},
+    ips: base.ips || {},
+    fingerprints: base.fingerprints || {}
+  };
 }
 function writeBans(obj) { writeJSON(BAN_LIST_FILE, obj); }
 
-function banHit(discordId, machineId, captureFp, consoleHost) {
+function clientIp(req) {
+  const xf = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  if (xf) return xf.replace(/^::ffff:/i, '');
+  const raw = String((req.socket && req.socket.remoteAddress) || req.ip || '');
+  return raw.replace(/^::ffff:/i, '');
+}
+
+function normalizeFpList(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((v) => String(v || '').trim().toLowerCase()).filter((v) => v.length >= 8);
+  }
+  return String(raw || '')
+    .split(/[,\s]+/)
+    .map((v) => v.trim().toLowerCase())
+    .filter((v) => v.length >= 8);
+}
+
+function fingerprintsFromReq(req, body) {
+  const fromHeader = normalizeFpList(req.headers['x-yolo-fp'] || '');
+  const fromBody = normalizeFpList((body && body.fingerprints) || []);
+  const fromQuery = normalizeFpList(req.query && req.query.fp);
+  return Array.from(new Set(fromHeader.concat(fromBody, fromQuery)));
+}
+
+function banHit(discordId, machineId, captureFp, consoleHost, ip, fingerprints) {
   const bans = readBans();
   const mid = String(machineId || '').toLowerCase();
   const did = String(discordId || '');
   const cap = String(captureFp || '').toLowerCase();
   const host = String(consoleHost || '').toLowerCase();
-  if (did && bans.discordIds && bans.discordIds[did]) {
+  const cip = String(ip || '').toLowerCase();
+  const fps = normalizeFpList(fingerprints || []);
+  if (did && bans.discordIds[did]) {
     return bans.discordIds[did].reason || 'This Discord account is banned from Yolo.';
   }
-  if (mid && bans.machines && bans.machines[mid]) {
+  if (mid && bans.machines[mid]) {
     return bans.machines[mid].reason || 'This PC is banned from Yolo.';
   }
-  if (cap && bans.capture && bans.capture[cap]) {
+  if (cap && bans.capture[cap]) {
     return bans.capture[cap].reason || 'This capture device is banned from Yolo.';
   }
-  if (host && bans.consoleHosts && bans.consoleHosts[host]) {
+  if (host && bans.consoleHosts[host]) {
     return bans.consoleHosts[host].reason || 'This console address is banned from Yolo.';
+  }
+  if (cip && bans.ips[cip]) {
+    return bans.ips[cip].reason || 'This network address is banned from Yolo.';
+  }
+  for (const fp of fps) {
+    if (bans.fingerprints[fp]) {
+      return bans.fingerprints[fp].reason || 'This device fingerprint is banned from Yolo.';
+    }
   }
   return null;
 }
@@ -216,6 +466,157 @@ function addBan(kind, key, reason, meta) {
   writeBans(bans);
 }
 
+function readIdentityGraph() {
+  const obj = readJSON(IDENTITY_GRAPH_FILE);
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { clusters: {}, index: {} };
+  }
+  return {
+    clusters: obj.clusters && typeof obj.clusters === 'object' ? obj.clusters : {},
+    index: obj.index && typeof obj.index === 'object' ? obj.index : {}
+  };
+}
+function writeIdentityGraph(obj) { writeJSON(IDENTITY_GRAPH_FILE, obj); }
+
+function signalKey(kind, value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (!v) return '';
+  return `${kind}:${v}`;
+}
+
+function identitySignals({ discordId, machineId, ip, fingerprints, captureFingerprint, consoleHost }) {
+  const out = [];
+  const d = signalKey('d', discordId);
+  const m = signalKey('m', machineId);
+  const i = signalKey('ip', ip);
+  const c = signalKey('cap', captureFingerprint);
+  const h = signalKey('ch', consoleHost);
+  if (d) out.push(d);
+  if (m) out.push(m);
+  if (i) out.push(i);
+  if (c) out.push(c);
+  if (h) out.push(h);
+  for (const fp of normalizeFpList(fingerprints || [])) {
+    const k = signalKey('fp', fp);
+    if (k) out.push(k);
+  }
+  return Array.from(new Set(out));
+}
+
+function emptyCluster() {
+  return {
+    discordIds: [],
+    machines: [],
+    ips: [],
+    fingerprints: [],
+    capture: [],
+    consoleHosts: [],
+    updatedAt: Date.now()
+  };
+}
+
+function ensureClusterBucket(cluster, kind, value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (!v) return;
+  const list = cluster[kind] || [];
+  if (!list.includes(v)) list.push(v);
+  cluster[kind] = list;
+}
+
+function mergeClusters(graph, clusterIds) {
+  const ids = Array.from(new Set(clusterIds.filter(Boolean)));
+  if (!ids.length) {
+    const nid = crypto.randomBytes(8).toString('hex');
+    graph.clusters[nid] = emptyCluster();
+    return nid;
+  }
+  const primary = ids[0];
+  const merged = emptyCluster();
+  for (const id of ids) {
+    const c = graph.clusters[id] || emptyCluster();
+    for (const kind of Object.keys(merged)) {
+      if (kind === 'updatedAt') continue;
+      for (const v of (c[kind] || [])) ensureClusterBucket(merged, kind, v);
+    }
+    if (id !== primary) delete graph.clusters[id];
+  }
+  merged.updatedAt = Date.now();
+  graph.clusters[primary] = merged;
+  for (const [sig, cid] of Object.entries(graph.index)) {
+    if (ids.includes(cid)) graph.index[sig] = primary;
+  }
+  return primary;
+}
+
+function rememberIdentity(identity) {
+  const signals = identitySignals(identity);
+  if (!signals.length) return null;
+  const graph = readIdentityGraph();
+  const existing = signals.map((s) => graph.index[s]).filter(Boolean);
+  const clusterId = mergeClusters(graph, existing);
+  const cluster = graph.clusters[clusterId] || emptyCluster();
+  ensureClusterBucket(cluster, 'discordIds', identity.discordId);
+  ensureClusterBucket(cluster, 'machines', identity.machineId);
+  ensureClusterBucket(cluster, 'ips', identity.ip);
+  ensureClusterBucket(cluster, 'capture', identity.captureFingerprint);
+  ensureClusterBucket(cluster, 'consoleHosts', identity.consoleHost);
+  for (const fp of normalizeFpList(identity.fingerprints || [])) {
+    ensureClusterBucket(cluster, 'fingerprints', fp);
+  }
+  cluster.updatedAt = Date.now();
+  graph.clusters[clusterId] = cluster;
+  for (const sig of signals) graph.index[sig] = clusterId;
+  // Refresh index for every signal stored in the merged cluster.
+  for (const did of cluster.discordIds) graph.index[signalKey('d', did)] = clusterId;
+  for (const mid of cluster.machines) graph.index[signalKey('m', mid)] = clusterId;
+  for (const ip of cluster.ips) graph.index[signalKey('ip', ip)] = clusterId;
+  for (const fp of cluster.fingerprints) graph.index[signalKey('fp', fp)] = clusterId;
+  for (const cap of cluster.capture) graph.index[signalKey('cap', cap)] = clusterId;
+  for (const host of cluster.consoleHosts) graph.index[signalKey('ch', host)] = clusterId;
+  writeIdentityGraph(graph);
+  return clusterId;
+}
+
+function banIdentityCluster(identity, reason, meta) {
+  const signals = identitySignals(identity);
+  rememberIdentity(identity);
+  const graph = readIdentityGraph();
+  let clusterId = null;
+  for (const sig of signals) {
+    if (graph.index[sig]) {
+      clusterId = graph.index[sig];
+      break;
+    }
+  }
+  const cluster = (clusterId && graph.clusters[clusterId]) || emptyCluster();
+  const banReason = reason || 'Tamper / crack attempt';
+  const owners = new Set(OWNER_DISCORD_IDS.map(String));
+  for (const did of cluster.discordIds) {
+    if (!owners.has(String(did))) addBan('discordIds', did, banReason, meta);
+  }
+  for (const mid of cluster.machines) addBan('machines', mid, banReason, meta);
+  for (const ip of cluster.ips) addBan('ips', ip, banReason, meta);
+  for (const fp of cluster.fingerprints) addBan('fingerprints', fp, banReason, meta);
+  for (const cap of cluster.capture) addBan('capture', cap, banReason, meta);
+  for (const host of cluster.consoleHosts) addBan('consoleHosts', host, banReason, meta);
+  // Always ban the seeds even if graph was empty.
+  if (identity.machineId) addBan('machines', String(identity.machineId).toLowerCase(), banReason, meta);
+  if (identity.discordId && !owners.has(String(identity.discordId))) {
+    addBan('discordIds', String(identity.discordId), banReason, meta);
+  }
+  if (identity.ip) addBan('ips', String(identity.ip).toLowerCase(), banReason, meta);
+  for (const fp of normalizeFpList(identity.fingerprints || [])) {
+    addBan('fingerprints', fp, banReason, meta);
+  }
+  if (identity.captureFingerprint) {
+    addBan('capture', String(identity.captureFingerprint).toLowerCase(), banReason, meta);
+  }
+  if (identity.consoleHost) {
+    addBan('consoleHosts', String(identity.consoleHost).toLowerCase(), banReason, meta);
+  }
+  return clusterId;
+}
+
 function bindHardwareOrConflict(discordId, captureFp, consoleHost) {
   const hw = readJSON(HW_BINDINGS_FILE);
   const out = hw && typeof hw === 'object' ? hw : { capture: {}, consoleHosts: {} };
@@ -227,9 +628,16 @@ function bindHardwareOrConflict(discordId, captureFp, consoleHost) {
   if (cap) {
     const prev = out.capture[cap];
     if (prev && prev.discordId && prev.discordId !== did && !isOwner(did) && !isOwner(prev.discordId)) {
-      addBan('capture', cap, 'Capture device reused across Discord accounts', { discordId: did, prev: prev.discordId });
-      addBan('discordIds', did, 'Alt account / shared capture device', { capture: cap, prev: prev.discordId });
-      addBan('discordIds', prev.discordId, 'Alt account / shared capture device', { capture: cap, next: did });
+      banIdentityCluster(
+        { discordId: did, captureFingerprint: cap },
+        'Alt account / shared capture device',
+        { capture: cap, prev: prev.discordId }
+      );
+      banIdentityCluster(
+        { discordId: prev.discordId, captureFingerprint: cap },
+        'Alt account / shared capture device',
+        { capture: cap, next: did }
+      );
       return { ok: false, error: 'This capture device is already linked to another Discord account.' };
     }
     if (!prev) out.capture[cap] = { discordId: did, at: Date.now() };
@@ -237,9 +645,16 @@ function bindHardwareOrConflict(discordId, captureFp, consoleHost) {
   if (host) {
     const prev = out.consoleHosts[host];
     if (prev && prev.discordId && prev.discordId !== did && !isOwner(did) && !isOwner(prev.discordId)) {
-      addBan('consoleHosts', host, 'PS5/host reused across Discord accounts', { discordId: did, prev: prev.discordId });
-      addBan('discordIds', did, 'Alt account / shared console host', { host, prev: prev.discordId });
-      addBan('discordIds', prev.discordId, 'Alt account / shared console host', { host, next: did });
+      banIdentityCluster(
+        { discordId: did, consoleHost: host },
+        'Alt account / shared console host',
+        { host, prev: prev.discordId }
+      );
+      banIdentityCluster(
+        { discordId: prev.discordId, consoleHost: host },
+        'Alt account / shared console host',
+        { host, next: did }
+      );
       return { ok: false, error: 'This console address is already linked to another Discord account.' };
     }
     if (!prev) out.consoleHosts[host] = { discordId: did, at: Date.now() };
@@ -426,11 +841,18 @@ app.get('/api/auth/desktop/login', (req, res) => {
   const port = Number(req.query.port || 0);
   const clientNonce = String(req.query.state || '');
   const machineId = String(req.query.machineId || '').trim().toLowerCase();
+  const fingerprints = fingerprintsFromReq(req, null);
+  const ip = clientIp(req);
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
     return res.status(500).send('Discord OAuth is not configured (DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET).');
   }
   if (!port || port < 1024 || port > 65535 || !clientNonce) {
     return res.status(400).send('Invalid desktop login request.');
+  }
+  // Early reject: banned machine / IP / fingerprint cannot even start OAuth.
+  const earlyBan = banHit('', machineId, '', '', ip, fingerprints);
+  if (earlyBan) {
+    return res.status(403).send(earlyBan);
   }
   // Signed state survives Render sleep / instance hops (in-memory Map alone cannot).
   const createdAt = Date.now();
@@ -438,9 +860,10 @@ app.get('/api/auth/desktop/login', (req, res) => {
     port,
     machineId,
     createdAt,
-    nonce: clientNonce
+    nonce: clientNonce,
+    fingerprints
   });
-  pendingDesktopLogins.set(signedState, { port, machineId, createdAt });
+  pendingDesktopLogins.set(signedState, { port, machineId, createdAt, fingerprints });
   const redirectUri = `${SITE_ORIGIN}/api/auth/desktop/callback`;
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
@@ -496,7 +919,11 @@ app.get('/api/auth/desktop/callback', async (req, res) => {
     }
     const tokenJson = await tokenRes.json();
     const user = await fetchDiscordUser(tokenJson.access_token);
-    const banned = banHit(user.id, pending.machineId, '', '');
+    const ip = clientIp(req);
+    const fps = Array.from(new Set(
+      normalizeFpList(pending.fingerprints || []).concat(fingerprintsFromReq(req, null))
+    ));
+    const banned = banHit(user.id, pending.machineId, '', '', ip, fps);
     if (banned) {
       return res.status(403).send(banned);
     }
@@ -508,6 +935,12 @@ app.get('/api/auth/desktop/callback', async (req, res) => {
     if (!machine.ok) {
       return res.status(403).send(machine.error || 'License machine check failed.');
     }
+    rememberIdentity({
+      discordId: user.id,
+      machineId: pending.machineId,
+      ip,
+      fingerprints: fps
+    });
     const issued = issueDesktopSession(user, entitlement, pending.machineId);
     const back = `http://127.0.0.1:${pending.port}/ok?token=${encodeURIComponent(issued.token)}`;
     res.redirect(back);
@@ -521,6 +954,8 @@ app.get('/api/auth/me', (req, res) => {
   const auth = req.headers.authorization || '';
   const token = auth.replace(/^Bearer\s+/i, '').trim();
   const machineId = String(req.headers['x-yolo-machine'] || req.query.machineId || '').trim().toLowerCase();
+  const ip = clientIp(req);
+  const fps = fingerprintsFromReq(req, null);
   if (!token) return res.status(401).json({ error: 'unauthorized' });
   const sessions = readSessions();
   const session = sessions[token];
@@ -530,9 +965,16 @@ app.get('/api/auth/me', (req, res) => {
     writeSessions(sessions);
     return res.status(401).json({ error: 'session expired' });
   }
-  const banned = banHit(session.discordId, machineId || session.machineId, '', '');
+  const banned = banHit(
+    session.discordId,
+    machineId || session.machineId,
+    '',
+    '',
+    ip,
+    fps
+  );
   if (banned) {
-    return res.status(403).json({ error: banned, entitled: false });
+    return res.status(403).json({ error: banned, entitled: false, banned: true });
   }
   memberHasRequiredRole(session.discordId).then((entitlement) => {
     session.entitled = !!entitlement.entitled;
@@ -556,6 +998,12 @@ app.get('/api/auth/me', (req, res) => {
       sessions[token] = session;
       writeSessions(sessions);
     }
+    rememberIdentity({
+      discordId: session.discordId,
+      machineId: machineId || session.machineId,
+      ip,
+      fingerprints: fps
+    });
     res.json(sessionPayload(token, session));
   }).catch(() => res.json(sessionPayload(token, session)));
 });
@@ -568,6 +1016,16 @@ app.post('/api/auth/tamper', (req, res) => {
   const details = String(body.details || '');
   const captureFingerprint = String(body.captureFingerprint || '').toLowerCase();
   const consoleHost = String(body.consoleHost || '').toLowerCase();
+  const fingerprints = fingerprintsFromReq(req, body);
+  const ip = clientIp(req);
+  const identity = {
+    discordId,
+    machineId,
+    ip,
+    fingerprints,
+    captureFingerprint,
+    consoleHost
+  };
   const report = {
     at: Date.now(),
     machineId,
@@ -577,6 +1035,8 @@ app.post('/api/auth/tamper', (req, res) => {
     details,
     captureFingerprint,
     consoleHost,
+    fingerprints,
+    ip,
     exe: String(body.exe || ''),
     version: String(body.version || '')
   };
@@ -586,13 +1046,10 @@ app.post('/api/auth/tamper', (req, res) => {
   // Keep last 500 reports for the developer.
   writeJSON(TAMPER_REPORTS_FILE, list.slice(-500));
 
-  if (machineId) addBan('machines', machineId, reason, { discordId, details });
-  if (discordId && !isOwner(discordId)) addBan('discordIds', discordId, reason, { machineId, details });
-  if (captureFingerprint) addBan('capture', captureFingerprint, reason, { discordId, machineId });
-  if (consoleHost) addBan('consoleHosts', consoleHost, reason, { discordId, machineId });
+  const clusterId = banIdentityCluster(identity, reason, { discordId, machineId, details, ip });
 
-  console.error('[TAMPER]', new Date().toISOString(), report);
-  res.json({ ok: true, banned: true });
+  console.error('[TAMPER]', new Date().toISOString(), { ...report, clusterId });
+  res.json({ ok: true, banned: true, clusterId: clusterId || null });
 });
 
 app.get('/api/auth/tamper-reports', requireAdmin, (req, res) => {
@@ -606,10 +1063,20 @@ app.post('/api/auth/hardware', (req, res) => {
   const machineId = String(body.machineId || '').trim().toLowerCase();
   const captureFingerprint = String(body.captureFingerprint || '').toLowerCase();
   const consoleHost = String(body.consoleHost || '').toLowerCase();
-  const banned = banHit(discordId, machineId, captureFingerprint, consoleHost);
-  if (banned) return res.status(403).json({ ok: false, error: banned });
+  const fingerprints = fingerprintsFromReq(req, body);
+  const ip = clientIp(req);
+  const banned = banHit(discordId, machineId, captureFingerprint, consoleHost, ip, fingerprints);
+  if (banned) return res.status(403).json({ ok: false, error: banned, banned: true });
   const bind = bindHardwareOrConflict(discordId, captureFingerprint, consoleHost);
-  if (!bind.ok) return res.status(403).json({ ok: false, error: bind.error });
+  if (!bind.ok) return res.status(403).json({ ok: false, error: bind.error, banned: true });
+  rememberIdentity({
+    discordId,
+    machineId,
+    ip,
+    fingerprints,
+    captureFingerprint,
+    consoleHost
+  });
   res.json({ ok: true });
 });
 
@@ -619,12 +1086,14 @@ app.post('/api/auth/manual', async (req, res) => {
   }
   const discordId = String((req.body && req.body.discordId) || '').replace(/\D/g, '');
   const machineId = String((req.body && req.body.machineId) || '').trim().toLowerCase();
+  const ip = clientIp(req);
+  const fps = fingerprintsFromReq(req, req.body || {});
   if (discordId.length < 17 || discordId.length > 20) {
     return res.status(400).json({ error: 'Enter a valid numeric Discord ID between 17 and 20 digits.' });
   }
-  const banned = banHit(discordId, machineId, '', '');
+  const banned = banHit(discordId, machineId, '', '', ip, fps);
   if (banned) {
-    return res.status(403).json({ error: banned });
+    return res.status(403).json({ error: banned, banned: true });
   }
   // Manual ID entry is developer-only. Buyers must use Login with Discord.
   if (!isOwner(discordId)) {
@@ -792,8 +1261,9 @@ async function fulfillSession(session, hint) {
   const already = orders.find(o => o.sessionId === session.id && o.status === 'fulfilled');
   if (already) return already.result;
 
+  const meta = session.metadata || {};
   let matched = [];
-  const metaIds = (session.metadata && session.metadata.productIds || '').split(',').filter(Boolean);
+  const metaIds = String(meta.productIds || '').split(',').filter(Boolean);
   if (metaIds.length) {
     matched = products.filter(p => metaIds.includes(p.id));
   } else if (hint && hint.productSlug) {
@@ -801,7 +1271,22 @@ async function fulfillSession(session, hint) {
     if (p) matched = [p];
   }
 
-  const discordId = session.client_reference_id || (hint && hint.discordUser && hint.discordUser.id) || null;
+  // Discord /purchase checkouts carry role + duration in metadata (no storefront product).
+  const discordPurchase = meta.source === 'discord_purchase' && meta.roleId;
+  if (discordPurchase && !matched.length) {
+    matched = [{
+      name: meta.planName || `Yolo — ${meta.plan || 'plan'}`,
+      discordRoleId: String(meta.roleId),
+      licenseDurationDays: Math.max(1, Number(meta.days || 0) || 7),
+      fileUrl: ''
+    }];
+  }
+
+  const discordId =
+    session.client_reference_id ||
+    meta.discordId ||
+    (hint && hint.discordUser && hint.discordUser.id) ||
+    null;
   const email = session.customer_details ? session.customer_details.email : (hint && hint.discordUser && hint.discordUser.email);
 
   let roleGranted = false;
@@ -828,7 +1313,8 @@ async function fulfillSession(session, hint) {
     id: 'ord_' + Date.now(), sessionId: session.id,
     productName: matched.map(p => p.name).join(', ') || (hint && hint.productSlug) || 'Unknown',
     discordUser: hint && hint.discordUser, amount: (session.amount_total || 0) / 100,
-    status: 'fulfilled', createdAt: Date.now(), result, roleGrants
+    status: 'fulfilled', createdAt: Date.now(), result, roleGrants,
+    source: discordPurchase ? 'discord_purchase' : 'storefront'
   };
   orders.push(orderRecord);
   writeJSON(ORDERS_FILE, orders);
@@ -970,4 +1456,8 @@ app.listen(PORT, () => {
   console.log(`  Storefront: ${SITE_URL}`);
   console.log(`  Health:     /api/health`);
   console.log(`  Update:     /api/update/latest.json`);
+  console.log(`  Discord:    /api/discord/interactions`);
+  registerPurchaseCommand().catch((err) => {
+    console.error('[discord] register on boot failed', err.message || err);
+  });
 });

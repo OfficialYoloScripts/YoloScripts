@@ -1,56 +1,5 @@
-YoloScripts — upload this folder to GitHub
-=========================================
+Same pack as ..\upload-to-github\
 
-This folder has EVERYTHING you need for Render (auth + updates + store).
+Use: C:\Users\john_\YOLO\YS\upload-to-github\
 
-DO NOT upload:
-  - .env          (secrets stay only in Render Environment)
-  - node_modules  (Render runs npm install)
-
-STEPS
------
-1. Open:  C:\Users\john_\YOLO\YS\upload-to-github
-
-2. Upload ALL of these into your GitHub repo root
-   (OfficialYoloScripts/YoloScripts), replacing old files:
-
-     fulfillment-server.js   ← Discord login + update API (required)
-     package.json
-     package-lock.json
-     render.yaml
-     .gitignore
-     .env.example
-     index.html
-     YoloScripts.html
-     YOLO.ico
-     README.md
-     SETUP-GUIDE.md
-     test-webhook.js
-     data\update-latest.json ← update manifest for the app
-
-3. On GitHub: commit / push (or drag-drop replace files, then commit).
-
-4. Render → yoloscripts → Manual Deploy (or wait for auto-deploy).
-
-5. Confirm env vars on Render (Environment tab), NOT in this folder:
-     DISCORD_CLIENT_ID
-     DISCORD_CLIENT_SECRET   ← real secret, not "value"
-     DISCORD_BOT_TOKEN       ← real bot token, not "value"
-     DISCORD_GUILD_ID        ← real server id, not "value"
-     DISCORD_REQUIRED_ROLE_IDS
-     OWNER_DISCORD_IDS
-     SITE_URL = https://yoloscripts.onrender.com/
-     ADMIN_KEY
-     (optional) YOLO_UPDATE_VERSION / YOLO_UPDATE_URL / YOLO_UPDATE_NOTES
-
-6. After deploy, check:
-     https://yoloscripts.onrender.com/api/health
-     https://yoloscripts.onrender.com/api/auth/config
-     https://yoloscripts.onrender.com/api/update/latest.json
-
-7. Then in YOLO.exe: Login with Discord again (one fresh attempt).
-
-Discord OAuth redirect (Developer Portal) must be exactly:
-  https://yoloscripts.onrender.com/api/auth/desktop/callback
-
-Generated: refreshed with latest fulfillment-server.js (signed login state + update API)
+See HOW-TO-UPLOAD.txt there for steps.
