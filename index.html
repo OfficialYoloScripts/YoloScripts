@@ -123,6 +123,16 @@ h1,h2,h3,h4,.font-display{font-family:var(--font-display);letter-spacing:.02em;}
 .btn.sm{padding:8px 16px;font-size:.72rem;}
 .btn.danger{background:linear-gradient(135deg,#9f1239,#f43f5e);border-color:rgba(244,63,94,.5);}
 .btn.block{width:100%;}
+.btn-discord{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--font-display);font-weight:700;font-size:.8rem;letter-spacing:.03em;text-transform:uppercase;
+  padding:11px 18px;border-radius:999px;border:1px solid #7289da;
+  background:linear-gradient(135deg,#5865F2,#4752C4);color:#fff;cursor:pointer;
+  box-shadow:0 4px 18px rgba(88,101,242,.4);transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;
+  white-space:nowrap;text-decoration:none;
+}
+.btn-discord:hover{transform:translateY(-2px);filter:brightness(1.08);box-shadow:0 8px 24px rgba(88,101,242,.5);color:#fff;}
+.btn-discord.sm{padding:8px 12px;font-size:.68rem;}
 .pill{
   display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;
   background:rgba(168,85,247,.14);border:1px solid var(--border);font-size:.72rem;font-weight:600;
@@ -376,6 +386,9 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
   color:var(--text-dim);transition:background .15s ease,color .15s ease;
 }
 #mobile-nav a:hover,#mobile-nav a:active{background:rgba(168,85,247,.16);color:#fff;}
+#mobile-nav .btn-discord{
+  margin-top:6px;width:100%;text-align:center;border-radius:12px;padding:14px 16px;font-size:.95rem;
+}
 .purchases-mobile{display:none;}
 .purchases-desktop{display:block;}
 
@@ -391,7 +404,10 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
   .brand img{width:36px;height:36px;}
   #auth-slot .btn{padding:8px 12px;font-size:.68rem;letter-spacing:.02em;}
   .icon-btn,.dev-gear{width:36px;height:36px;font-size:1rem;}
+  .header-discord .discord-full{display:none;}
+  .header-discord .discord-short{display:inline;}
 }
+.header-discord .discord-short{display:none;}
 
 @media (max-width:720px){
   .wrap{padding:0 16px;}
@@ -477,6 +493,9 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
       <a href="#/purchases" data-route="purchases">My Purchases</a>
     </nav>
     <div class="header-actions">
+      <a id="header-discord-link" class="btn-discord sm header-discord" href="#" target="_blank" rel="noopener">
+        <span class="discord-full">Join Discord</span><span class="discord-short">Discord</span>
+      </a>
       <button class="icon-btn" title="Wishlist" onclick="YS.openWishlist()">♥<span class="cart-badge hidden" id="wish-badge">0</span></button>
       <button class="icon-btn" title="Cart" onclick="YS.openCart()">🛒<span class="cart-badge hidden" id="cart-badge">0</span></button>
       <div id="dev-gear-slot"></div>
@@ -489,7 +508,7 @@ footer{border-top:1px solid var(--border);padding:50px 24px 26px;margin-top:40px
     <a href="#/shop" data-route="shop">Shop</a>
     <a href="#/purchases" data-route="purchases">My Purchases</a>
     <a href="#/shop?featured=1">Featured</a>
-    <a id="mobile-discord-link" href="#" target="_blank" rel="noopener">Join Discord</a>
+    <a id="mobile-discord-link" class="btn-discord" href="#" target="_blank" rel="noopener">Join Discord</a>
   </div>
 </header>
 
@@ -743,28 +762,26 @@ function applyTheme(){
   document.getElementById('brand-name').innerHTML = esc(state.settings.brandFirstWord||'YOLO')+' <span>'+esc(state.settings.brandWord||'SCRIPTS')+'</span>';
   document.getElementById('brand-tagline').textContent = state.settings.tagline||'';
   document.getElementById('footer-blurb').textContent = state.settings.footerBlurb||'';
-  const invite = (state.settings.discordInvite || '').trim();
-  const discordLink = document.getElementById('footer-discord-link');
-  const supportLink = document.getElementById('footer-support-link');
-  const mobileDiscord = document.getElementById('mobile-discord-link');
+  const invite = getDiscordInvite();
   const wireInvite = (el, label)=>{
     if(!el) return;
-    if(invite && invite !== '#' && !invite.includes('your-invite')){
+    if(invite){
       el.href = invite;
       el.target = '_blank';
       el.rel = 'noopener';
       el.onclick = null;
-      if(label) el.textContent = label;
+      if(label && !el.querySelector('.discord-full')) el.textContent = label;
     } else {
       el.href = '#';
       el.removeAttribute('target');
       el.onclick = function(e){ e.preventDefault(); toast('Discord invite not set yet — add it in Devmode → Integrations.','warn'); };
-      if(label) el.textContent = label;
+      if(label && !el.querySelector('.discord-full')) el.textContent = label;
     }
   };
-  wireInvite(discordLink, 'Join Discord');
-  wireInvite(supportLink, 'Support');
-  wireInvite(mobileDiscord, 'Join Discord');
+  wireInvite(document.getElementById('footer-discord-link'), 'Join Discord');
+  wireInvite(document.getElementById('footer-support-link'), 'Support');
+  wireInvite(document.getElementById('mobile-discord-link'), 'Join Discord');
+  wireInvite(document.getElementById('header-discord-link'), null);
   document.getElementById('footer-year').textContent = new Date().getFullYear();
   const socialWrap = document.getElementById('footer-social');
   const socials = [];
@@ -830,6 +847,22 @@ const Discord = {
   }
 };
 window.Discord = Discord; // inline onclick="Discord.login()" handlers run in global scope
+
+function getDiscordInvite(){
+  const invite = (state.settings.discordInvite || '').trim();
+  if(invite && invite !== '#' && !invite.includes('your-invite')) return invite;
+  return '';
+}
+function openDiscordInvite(e){
+  if(e) e.preventDefault();
+  const invite = getDiscordInvite();
+  if(!invite){
+    toast('Discord invite not set yet — add it in Devmode → Integrations.','warn');
+    return false;
+  }
+  window.open(invite, '_blank', 'noopener');
+  return false;
+}
 
 function isOwner(){
   return !!(state.session && state.session.discordUser && state.session.discordUser.id === OWNER_DISCORD_ID);
@@ -909,6 +942,7 @@ function viewHome(){
       <p class="sub">${esc(state.settings.heroSubtitle||'')}</p>
       <div class="cta-row">
         <button class="btn" onclick="YS.nav('shop')">🛍️ Browse Products</button>
+        <a class="btn-discord" href="${esc(getDiscordInvite()||'#')}" target="_blank" rel="noopener" onclick="return YS.openDiscordInvite(event)">Join Discord</a>
       </div>
       ${!showEmpty ? `
       <div class="stat-strip">
@@ -2074,7 +2108,7 @@ window.YS = {
   saveSettings, saveIntegrations, syncToServer, refreshOrdersFromServer,
   addTestimonial, updateTestimonial, removeTestimonial, exportSubscribers, subscribeNewsletter,
   exportData, importData, wipeAll, downloadBakedHtml, downloadGithubBundle,
-  toggleMobileNav, dismissAnnounce, renderRoute
+  toggleMobileNav, dismissAnnounce, renderRoute, openDiscordInvite
 };
 
 window.addEventListener('hashchange', function(){
