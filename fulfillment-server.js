@@ -245,8 +245,8 @@ async function createDiscordPlanCheckout(planKey, discordUserId) {
         }
       }
     }],
-    success_url: `${SITE_ORIGIN}/?ys_discord_paid=1&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_ORIGIN}/?ys_discord_cancel=1`,
+    success_url: `${SITE_ORIGIN}/pay/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${SITE_ORIGIN}/pay/cancel`,
     client_reference_id: String(discordUserId),
     metadata: {
       source: 'discord_purchase',
@@ -342,6 +342,60 @@ app.get('/api/health', (req, res) => res.json({
   discordPurchase: !!(DISCORD_BOT_TOKEN && DISCORD_CLIENT_ID && DISCORD_GUILD_ID && DISCORD_PUBLIC_KEY && stripe),
   stripe: !!stripe
 }));
+
+// Simple post-payment pages for Discord /purchase (no storefront).
+function sendPayPage(res, title, bodyHtml) {
+  res.status(200).type('html').send(`<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title}</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Segoe UI,system-ui,sans-serif;
+  background:#12081f;color:#f4efff}
+  .card{max-width:420px;margin:24px;padding:28px 24px;border-radius:16px;background:#1c122c;
+  border:1px solid rgba(180,140,255,.35);text-align:center;line-height:1.5}
+  h1{font-size:1.35rem;margin:0 0 12px}p{margin:0 0 10px;color:#cbbfe0}
+  .ok{color:#7dffa8}.dim{color:#9a8fb3;font-size:.92rem}
+</style></head><body><div class="card">${bodyHtml}</div></body></html>`);
+}
+app.get('/pay/success', async (req, res) => {
+  // Also fulfill here so a missed Stripe webhook still grants the Discord role.
+  const sessionId = String(req.query.session_id || '').trim();
+  let roleGranted = false;
+  let fulfillError = '';
+  if (stripe && sessionId) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === 'paid') {
+        const result = await fulfillSession(session, {});
+        roleGranted = !!(result && result.roleGranted);
+        if (!roleGranted) {
+          fulfillError = 'Payment ok, but Discord role was not granted. Check bot role hierarchy / role IDs.';
+        }
+      } else {
+        fulfillError = 'Payment is not marked paid yet. Wait a moment and refresh.';
+      }
+    } catch (err) {
+      console.error('[pay/success] fulfill failed', err);
+      fulfillError = err.message || 'Could not activate license automatically.';
+    }
+  }
+  if (roleGranted) {
+    return sendPayPage(res, 'Payment complete', `
+      <h1 class="ok">Payment successful</h1>
+      <p>Your Discord license role was granted.</p>
+      <p class="dim">Return to Discord, then open YOLO and Login with Discord.</p>`);
+  }
+  return sendPayPage(res, 'Payment complete', `
+    <h1 class="ok">Payment received</h1>
+    <p>${fulfillError || 'Activating your license… if no role appears in Discord, ask the owner to check Render logs.'}</p>
+    <p class="dim">You can close this tab and return to Discord.</p>`);
+});
+app.get('/pay/cancel', (req, res) => {
+  sendPayPage(res, 'Payment cancelled', `
+    <h1>Payment cancelled</h1>
+    <p class="dim">No charge was made. Run <b>/purchase</b> again in Discord whenever you want.</p>`);
+});
 
 /* ------------------------------------------------------------------
    DESKTOP UPDATE MANIFEST
@@ -1291,6 +1345,12 @@ async function fulfillSession(session, hint) {
 
   let roleGranted = false;
   const roleGrants = [];
+  if (!matched.length) {
+    console.error('[fulfill] no products/plan matched for session', session.id, meta);
+  }
+  if (!discordId) {
+    console.error('[fulfill] missing discordId for session', session.id);
+  }
   for (const p of matched) {
     if (p.discordRoleId && discordId && DISCORD_BOT_TOKEN && DISCORD_GUILD_ID) {
       const ok = await grantDiscordRole(discordId, p.discordRoleId);
@@ -1299,6 +1359,13 @@ async function fulfillSession(session, hint) {
         const expiresAt = p.licenseDurationDays > 0 ? Date.now() + p.licenseDurationDays * 86400000 : null;
         roleGrants.push({ userId: discordId, roleId: p.discordRoleId, productName: p.name, expiresAt, revoked: false });
       }
+    } else {
+      console.error('[fulfill] skip role grant', {
+        hasRole: !!p.discordRoleId,
+        discordId: !!discordId,
+        bot: !!DISCORD_BOT_TOKEN,
+        guild: !!DISCORD_GUILD_ID
+      });
     }
   }
 
@@ -1373,9 +1440,24 @@ async function grantDiscordRole(userId, roleId) {
   try {
     const res = await fetch(
       `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`,
-      { method: 'PUT', headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+          'X-Audit-Log-Reason': 'Yolo license purchase'
+        }
+      }
     );
-    return res.ok;
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).slice(0, 300); } catch (_) {}
+      console.error(
+        `[discord] role grant failed user=${userId} role=${roleId} status=${res.status} ${detail}`
+      );
+      return false;
+    }
+    console.log(`[discord] role granted user=${userId} role=${roleId}`);
+    return true;
   } catch (err) {
     console.error('Discord role grant failed', err);
     return false;
