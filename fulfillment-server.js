@@ -32,8 +32,8 @@ const SITE_URL = process.env.SITE_URL || 'https://yoloscripts.onrender.com/';
 const SITE_ORIGIN = String(SITE_URL).replace(/\/+$/, '');
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
+const DISCORD_CLIENT_ID = String(process.env.DISCORD_CLIENT_ID || '').trim();
+const DISCORD_CLIENT_SECRET = String(process.env.DISCORD_CLIENT_SECRET || '').trim();
 const DISCORD_REQUIRED_ROLE_IDS = String(process.env.DISCORD_REQUIRED_ROLE_IDS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 // Accept OWNER_DISCORD_IDS (preferred) or singular OWNER_DISCORD_ID from Render.
@@ -49,14 +49,62 @@ const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const DESKTOP_SESSIONS_FILE = path.join(DATA_DIR, 'desktop_sessions.json');
 const LICENSE_BINDINGS_FILE = path.join(DATA_DIR, 'license_bindings.json');
+const TAMPER_REPORTS_FILE = path.join(DATA_DIR, 'tamper_reports.json');
+const BAN_LIST_FILE = path.join(DATA_DIR, 'ban_list.json');
+const HW_BINDINGS_FILE = path.join(DATA_DIR, 'hardware_bindings.json');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRODUCTS_FILE)) fs.writeFileSync(PRODUCTS_FILE, '[]');
 if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]');
 if (!fs.existsSync(DESKTOP_SESSIONS_FILE)) fs.writeFileSync(DESKTOP_SESSIONS_FILE, '{}');
 if (!fs.existsSync(LICENSE_BINDINGS_FILE)) fs.writeFileSync(LICENSE_BINDINGS_FILE, '{}');
+if (!fs.existsSync(TAMPER_REPORTS_FILE)) fs.writeFileSync(TAMPER_REPORTS_FILE, '[]');
+if (!fs.existsSync(BAN_LIST_FILE)) fs.writeFileSync(BAN_LIST_FILE, '{"machines":{},"discordIds":{},"capture":{},"consoleHosts":{}}');
+if (!fs.existsSync(HW_BINDINGS_FILE)) fs.writeFileSync(HW_BINDINGS_FILE, '{"capture":{},"consoleHosts":{}}');
 
-// state → { port, machineId, createdAt } for desktop OAuth handshake
+// In-memory cache only (Render free tier can sleep / change instances mid-login).
+// Real continuity comes from a signed Discord `state` payload below.
 const pendingDesktopLogins = new Map();
+const AUTH_STATE_SECRET =
+  String(process.env.AUTH_STATE_SECRET || ADMIN_KEY || DISCORD_CLIENT_SECRET || 'yolo-desktop-state').trim();
+const DESKTOP_STATE_TTL_MS = 15 * 60 * 1000;
+
+function signDesktopState(payload) {
+  const body = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', AUTH_STATE_SECRET).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+
+function verifyDesktopState(state) {
+  const raw = String(state || '');
+  const dot = raw.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = raw.slice(0, dot);
+  const sig = raw.slice(dot + 1);
+  if (!body || !sig) return null;
+  const expect = crypto.createHmac('sha256', AUTH_STATE_SECRET).update(body).digest('base64url');
+  try {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expect);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  } catch (_) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload || typeof payload !== 'object') return null;
+    const createdAt = Number(payload.createdAt || 0);
+    if (!createdAt || Date.now() - createdAt > DESKTOP_STATE_TTL_MS) return null;
+    const port = Number(payload.port || 0);
+    if (!port || port < 1024 || port > 65535) return null;
+    return {
+      port,
+      machineId: String(payload.machineId || '').trim().toLowerCase(),
+      createdAt
+    };
+  } catch (_) {
+    return null;
+  }
+}
 
 function readJSON(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return []; } }
 function writeJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
@@ -86,6 +134,26 @@ app.use(express.json({ limit: '5mb' }));
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 /* ------------------------------------------------------------------
+   DESKTOP UPDATE MANIFEST
+   Consumed by YOLOUpdateTool.exe and in-app UpdateChecker.
+   Override via env YOLO_UPDATE_* or data/update-latest.json
+------------------------------------------------------------------ */
+const UPDATE_MANIFEST_FILE = path.join(DATA_DIR, 'update-latest.json');
+app.get('/api/update/latest.json', (req, res) => {
+  const fromFile = readJSON(UPDATE_MANIFEST_FILE);
+  const manifest = {
+    version: process.env.YOLO_UPDATE_VERSION || (fromFile && fromFile.version) || '1.1.0',
+    url: process.env.YOLO_UPDATE_URL || (fromFile && fromFile.url) ||
+      'https://yoloscripts.onrender.com/',
+    notes: process.env.YOLO_UPDATE_NOTES || (fromFile && fromFile.notes) ||
+      'Latest YOLO Scripts desktop build.',
+    sha256: process.env.YOLO_UPDATE_SHA256 || (fromFile && fromFile.sha256) || '',
+  };
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(manifest);
+});
+
+/* ------------------------------------------------------------------
    DESKTOP AUTH (Yolo.exe Discord login — Vanta-style workflow)
    Register this redirect URL in the Discord Developer Portal:
      https://yoloscripts.onrender.com/api/auth/desktop/callback
@@ -104,6 +172,80 @@ function writeBindings(obj) { writeJSON(LICENSE_BINDINGS_FILE, obj); }
 
 function isOwner(discordId) {
   return OWNER_DISCORD_IDS.includes(String(discordId || ''));
+}
+
+function readBans() {
+  const obj = readJSON(BAN_LIST_FILE);
+  return obj && typeof obj === 'object' && !Array.isArray(obj)
+    ? obj
+    : { machines: {}, discordIds: {}, capture: {}, consoleHosts: {} };
+}
+function writeBans(obj) { writeJSON(BAN_LIST_FILE, obj); }
+
+function banHit(discordId, machineId, captureFp, consoleHost) {
+  const bans = readBans();
+  const mid = String(machineId || '').toLowerCase();
+  const did = String(discordId || '');
+  const cap = String(captureFp || '').toLowerCase();
+  const host = String(consoleHost || '').toLowerCase();
+  if (did && bans.discordIds && bans.discordIds[did]) {
+    return bans.discordIds[did].reason || 'This Discord account is banned from Yolo.';
+  }
+  if (mid && bans.machines && bans.machines[mid]) {
+    return bans.machines[mid].reason || 'This PC is banned from Yolo.';
+  }
+  if (cap && bans.capture && bans.capture[cap]) {
+    return bans.capture[cap].reason || 'This capture device is banned from Yolo.';
+  }
+  if (host && bans.consoleHosts && bans.consoleHosts[host]) {
+    return bans.consoleHosts[host].reason || 'This console address is banned from Yolo.';
+  }
+  return null;
+}
+
+function addBan(kind, key, reason, meta) {
+  if (!key) return;
+  const bans = readBans();
+  const bucket = bans[kind] || {};
+  bucket[String(key)] = {
+    reason: reason || 'banned',
+    at: Date.now(),
+    ...(meta || {})
+  };
+  bans[kind] = bucket;
+  writeBans(bans);
+}
+
+function bindHardwareOrConflict(discordId, captureFp, consoleHost) {
+  const hw = readJSON(HW_BINDINGS_FILE);
+  const out = hw && typeof hw === 'object' ? hw : { capture: {}, consoleHosts: {} };
+  out.capture = out.capture || {};
+  out.consoleHosts = out.consoleHosts || {};
+  const did = String(discordId || '');
+  const cap = String(captureFp || '').toLowerCase();
+  const host = String(consoleHost || '').toLowerCase();
+  if (cap) {
+    const prev = out.capture[cap];
+    if (prev && prev.discordId && prev.discordId !== did && !isOwner(did) && !isOwner(prev.discordId)) {
+      addBan('capture', cap, 'Capture device reused across Discord accounts', { discordId: did, prev: prev.discordId });
+      addBan('discordIds', did, 'Alt account / shared capture device', { capture: cap, prev: prev.discordId });
+      addBan('discordIds', prev.discordId, 'Alt account / shared capture device', { capture: cap, next: did });
+      return { ok: false, error: 'This capture device is already linked to another Discord account.' };
+    }
+    if (!prev) out.capture[cap] = { discordId: did, at: Date.now() };
+  }
+  if (host) {
+    const prev = out.consoleHosts[host];
+    if (prev && prev.discordId && prev.discordId !== did && !isOwner(did) && !isOwner(prev.discordId)) {
+      addBan('consoleHosts', host, 'PS5/host reused across Discord accounts', { discordId: did, prev: prev.discordId });
+      addBan('discordIds', did, 'Alt account / shared console host', { host, prev: prev.discordId });
+      addBan('discordIds', prev.discordId, 'Alt account / shared console host', { host, next: did });
+      return { ok: false, error: 'This console address is already linked to another Discord account.' };
+    }
+    if (!prev) out.consoleHosts[host] = { discordId: did, at: Date.now() };
+  }
+  writeJSON(HW_BINDINGS_FILE, out);
+  return { ok: true };
 }
 
 function productRoleIds() {
@@ -196,19 +338,52 @@ function avatarUrlFor(user) {
   return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
 }
 
+/** Product / role-grant license end — separate from desktop sign-in token TTL. */
+function resolveLicenseExpiry(discordId, owner) {
+  if (owner) {
+    return { licenseLifetime: true, licenseExpiresAt: null };
+  }
+  const uid = String(discordId || '');
+  const orders = readJSON(ORDERS_FILE);
+  let foundLifetime = false;
+  let latestTimedSec = null;
+  for (const order of orders) {
+    for (const grant of order.roleGrants || []) {
+      if (String(grant.userId) !== uid || grant.revoked) continue;
+      if (!grant.expiresAt) {
+        foundLifetime = true;
+        continue;
+      }
+      const sec = Math.floor(Number(grant.expiresAt) / 1000);
+      if (!Number.isFinite(sec) || sec <= 0) continue;
+      if (latestTimedSec === null || sec > latestTimedSec) latestTimedSec = sec;
+    }
+  }
+  // Lifetime product (licenseDurationDays unset/0) or manual/owner-style role.
+  if (foundLifetime || latestTimedSec === null) {
+    return { licenseLifetime: true, licenseExpiresAt: null };
+  }
+  return { licenseLifetime: false, licenseExpiresAt: latestTimedSec };
+}
+
 function issueDesktopSession(user, entitlement, machineId) {
   const token = crypto.randomBytes(32).toString('hex');
   const sessions = readSessions();
+  // Sign-in token TTL only (re-auth). Not the customer's product license end date.
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // 30 days
+  const license = resolveLicenseExpiry(user.id, !!entitlement.owner);
   sessions[token] = {
     discordId: user.id,
     username: user.username,
     avatarUrl: avatarUrlFor(user),
     entitled: !!entitlement.entitled,
-    entitlementLabel: entitlement.owner ? 'owner' : 'licensed',
+    // Never expose internal roles like "owner" to the desktop UI.
+    entitlementLabel: entitlement.entitled ? 'licensed' : '',
     owner: !!entitlement.owner,
     machineId: machineId || '',
     expiresAt,
+    licenseLifetime: !!license.licenseLifetime,
+    licenseExpiresAt: license.licenseExpiresAt,
     createdAt: Date.now()
   };
   writeSessions(sessions);
@@ -216,14 +391,18 @@ function issueDesktopSession(user, entitlement, machineId) {
 }
 
 function sessionPayload(token, session) {
+  const license = resolveLicenseExpiry(session.discordId, !!session.owner);
   return {
     accessToken: token,
     token,
     expiresAt: session.expiresAt,
     entitled: !!session.entitled,
-    entitlementLabel: session.owner ? 'owner' : 'licensed',
+    entitlementLabel: session.entitled ? 'licensed' : '',
     owner: !!session.owner,
     machineBound: !session.owner,
+    // Product license (what the profile UI shows) — not the 30-day session token.
+    licenseLifetime: !!license.licenseLifetime,
+    licenseExpiresAt: license.licenseLifetime ? 0 : (license.licenseExpiresAt || 0),
     user: {
       id: session.discordId,
       username: session.username,
@@ -245,22 +424,30 @@ app.get('/api/auth/config', (req, res) => {
 
 app.get('/api/auth/desktop/login', (req, res) => {
   const port = Number(req.query.port || 0);
-  const state = String(req.query.state || '');
+  const clientNonce = String(req.query.state || '');
   const machineId = String(req.query.machineId || '').trim().toLowerCase();
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
     return res.status(500).send('Discord OAuth is not configured (DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET).');
   }
-  if (!port || port < 1024 || port > 65535 || !state) {
+  if (!port || port < 1024 || port > 65535 || !clientNonce) {
     return res.status(400).send('Invalid desktop login request.');
   }
-  pendingDesktopLogins.set(state, { port, machineId, createdAt: Date.now() });
+  // Signed state survives Render sleep / instance hops (in-memory Map alone cannot).
+  const createdAt = Date.now();
+  const signedState = signDesktopState({
+    port,
+    machineId,
+    createdAt,
+    nonce: clientNonce
+  });
+  pendingDesktopLogins.set(signedState, { port, machineId, createdAt });
   const redirectUri = `${SITE_ORIGIN}/api/auth/desktop/callback`;
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
     response_type: 'code',
     scope: 'identify',
     redirect_uri: redirectUri,
-    state,
+    state: signedState,
     prompt: 'consent'
   });
   res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
@@ -270,8 +457,11 @@ app.get('/api/auth/desktop/callback', async (req, res) => {
   try {
     const code = String(req.query.code || '');
     const state = String(req.query.state || '');
-    const pending = pendingDesktopLogins.get(state);
+    let pending = pendingDesktopLogins.get(state) || null;
     pendingDesktopLogins.delete(state);
+    if (!pending) {
+      pending = verifyDesktopState(state);
+    }
     if (!code || !pending) {
       return res.status(400).send('Invalid or expired sign-in state. Return to Yolo and try again.');
     }
@@ -289,10 +479,27 @@ app.get('/api/auth/desktop/callback', async (req, res) => {
       body
     });
     if (!tokenRes.ok) {
-      return res.status(400).send('Discord token exchange failed.');
+      let detail = '';
+      try {
+        const errJson = await tokenRes.json();
+        detail = String(errJson.error_description || errJson.error || '').trim();
+      } catch (_) {
+        try { detail = (await tokenRes.text()).slice(0, 180); } catch (_) {}
+      }
+      console.error('Discord token exchange failed', tokenRes.status, detail);
+      // Surface Discord's reason (no secrets) so Render misconfig is obvious.
+      return res.status(400).send(
+        detail
+          ? `Discord token exchange failed: ${detail}`
+          : 'Discord token exchange failed. Check DISCORD_CLIENT_SECRET on Render.'
+      );
     }
     const tokenJson = await tokenRes.json();
     const user = await fetchDiscordUser(tokenJson.access_token);
+    const banned = banHit(user.id, pending.machineId, '', '');
+    if (banned) {
+      return res.status(403).send(banned);
+    }
     const entitlement = await memberHasRequiredRole(user.id);
     if (!entitlement.entitled) {
       return res.status(403).send(entitlement.error || 'Not entitled to Yolo.');
@@ -323,10 +530,14 @@ app.get('/api/auth/me', (req, res) => {
     writeSessions(sessions);
     return res.status(401).json({ error: 'session expired' });
   }
+  const banned = banHit(session.discordId, machineId || session.machineId, '', '');
+  if (banned) {
+    return res.status(403).json({ error: banned, entitled: false });
+  }
   memberHasRequiredRole(session.discordId).then((entitlement) => {
     session.entitled = !!entitlement.entitled;
     session.owner = !!entitlement.owner;
-    session.entitlementLabel = entitlement.owner ? 'owner' : 'licensed';
+    session.entitlementLabel = entitlement.entitled ? 'licensed' : '';
     sessions[token] = session;
     writeSessions(sessions);
     if (!session.entitled) {
@@ -349,6 +560,59 @@ app.get('/api/auth/me', (req, res) => {
   }).catch(() => res.json(sessionPayload(token, session)));
 });
 
+app.post('/api/auth/tamper', (req, res) => {
+  const body = req.body || {};
+  const machineId = String(body.machineId || '').trim().toLowerCase();
+  const discordId = String(body.discordId || '').replace(/\D/g, '');
+  const reason = String(body.reason || 'tamper');
+  const details = String(body.details || '');
+  const captureFingerprint = String(body.captureFingerprint || '').toLowerCase();
+  const consoleHost = String(body.consoleHost || '').toLowerCase();
+  const report = {
+    at: Date.now(),
+    machineId,
+    discordId,
+    username: String(body.username || ''),
+    reason,
+    details,
+    captureFingerprint,
+    consoleHost,
+    exe: String(body.exe || ''),
+    version: String(body.version || '')
+  };
+  const reports = readJSON(TAMPER_REPORTS_FILE);
+  const list = Array.isArray(reports) ? reports : [];
+  list.push(report);
+  // Keep last 500 reports for the developer.
+  writeJSON(TAMPER_REPORTS_FILE, list.slice(-500));
+
+  if (machineId) addBan('machines', machineId, reason, { discordId, details });
+  if (discordId && !isOwner(discordId)) addBan('discordIds', discordId, reason, { machineId, details });
+  if (captureFingerprint) addBan('capture', captureFingerprint, reason, { discordId, machineId });
+  if (consoleHost) addBan('consoleHosts', consoleHost, reason, { discordId, machineId });
+
+  console.error('[TAMPER]', new Date().toISOString(), report);
+  res.json({ ok: true, banned: true });
+});
+
+app.get('/api/auth/tamper-reports', requireAdmin, (req, res) => {
+  const reports = readJSON(TAMPER_REPORTS_FILE);
+  res.json({ ok: true, reports: Array.isArray(reports) ? reports.slice().reverse() : [] });
+});
+
+app.post('/api/auth/hardware', (req, res) => {
+  const body = req.body || {};
+  const discordId = String(body.discordId || '').replace(/\D/g, '');
+  const machineId = String(body.machineId || '').trim().toLowerCase();
+  const captureFingerprint = String(body.captureFingerprint || '').toLowerCase();
+  const consoleHost = String(body.consoleHost || '').toLowerCase();
+  const banned = banHit(discordId, machineId, captureFingerprint, consoleHost);
+  if (banned) return res.status(403).json({ ok: false, error: banned });
+  const bind = bindHardwareOrConflict(discordId, captureFingerprint, consoleHost);
+  if (!bind.ok) return res.status(403).json({ ok: false, error: bind.error });
+  res.json({ ok: true });
+});
+
 app.post('/api/auth/manual', async (req, res) => {
   if (!MANUAL_LOGIN_ENABLED) {
     return res.status(403).json({ error: 'Manual Discord ID login is disabled.' });
@@ -357,6 +621,10 @@ app.post('/api/auth/manual', async (req, res) => {
   const machineId = String((req.body && req.body.machineId) || '').trim().toLowerCase();
   if (discordId.length < 17 || discordId.length > 20) {
     return res.status(400).json({ error: 'Enter a valid numeric Discord ID between 17 and 20 digits.' });
+  }
+  const banned = banHit(discordId, machineId, '', '');
+  if (banned) {
+    return res.status(403).json({ error: banned });
   }
   // Manual ID entry is developer-only. Buyers must use Login with Discord.
   if (!isOwner(discordId)) {
@@ -701,4 +969,5 @@ app.listen(PORT, () => {
   console.log(`YoloScripts running on port ${PORT}`);
   console.log(`  Storefront: ${SITE_URL}`);
   console.log(`  Health:     /api/health`);
+  console.log(`  Update:     /api/update/latest.json`);
 });
