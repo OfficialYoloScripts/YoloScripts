@@ -1,19 +1,7 @@
 /**
  * YoloScripts fulfillment-server.js
- * --------------------------------------------------------------
- * Serves the storefront (index.html / YoloScripts.html) AND the API:
- *   - Discord-ready static site
- *   - Verified Stripe payments
- *   - Automatic Discord role granting
- *   - Purchase confirmation emails
- *   - Multi-item cart checkout
- *   - Cross-device order ledger for Devmode
- *
- * Run locally:
- *   npm install
- *   npm start
- *
- * Deploy: push this folder to GitHub → connect Render (see README.md).
+ * Serves the public setup site + license/purchase API.
+ * Keep secrets in Render Environment / .env only — never commit them.
  */
 
 require('dotenv').config();
@@ -38,11 +26,12 @@ const DISCORD_CLIENT_SECRET = String(process.env.DISCORD_CLIENT_SECRET || '').tr
 const DISCORD_PUBLIC_KEY = String(process.env.DISCORD_PUBLIC_KEY || '').trim();
 const DISCORD_REQUIRED_ROLE_IDS = String(process.env.DISCORD_REQUIRED_ROLE_IDS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
-// Accept OWNER_DISCORD_IDS (preferred) or singular OWNER_DISCORD_ID from Render.
+// Owner Discord IDs — set OWNER_DISCORD_ID / OWNER_DISCORD_IDS on Render only (no hardcoded default).
 const OWNER_DISCORD_IDS = String(
-  process.env.OWNER_DISCORD_IDS || process.env.OWNER_DISCORD_ID || '1199408578717560942'
+  process.env.OWNER_DISCORD_IDS || process.env.OWNER_DISCORD_ID || ''
 ).split(',').map(s => s.trim()).filter(Boolean);
-const MANUAL_LOGIN_ENABLED = String(process.env.MANUAL_LOGIN_ENABLED || 'true').toLowerCase() !== 'false';
+// Manual Discord-ID login stays OFF unless you explicitly enable it.
+const MANUAL_LOGIN_ENABLED = String(process.env.MANUAL_LOGIN_ENABLED || 'false').toLowerCase() === 'true';
 const YOLO_AUTH_OPEN = String(process.env.YOLO_AUTH_OPEN || '').toLowerCase() === 'true';
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -79,7 +68,10 @@ if (!fs.existsSync(IDENTITY_GRAPH_FILE)) {
 // Real continuity comes from a signed Discord `state` payload below.
 const pendingDesktopLogins = new Map();
 const AUTH_STATE_SECRET =
-  String(process.env.AUTH_STATE_SECRET || ADMIN_KEY || DISCORD_CLIENT_SECRET || 'yolo-desktop-state').trim();
+  String(process.env.AUTH_STATE_SECRET || ADMIN_KEY || DISCORD_CLIENT_SECRET || '').trim();
+if (!AUTH_STATE_SECRET) {
+  console.warn('[auth] AUTH_STATE_SECRET / ADMIN_KEY / DISCORD_CLIENT_SECRET missing — desktop login state signing is weak until set.');
+}
 const DESKTOP_STATE_TTL_MS = 15 * 60 * 1000;
 
 function signDesktopState(payload) {
@@ -382,11 +374,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), handl
 app.post('/api/discord/interactions', express.raw({ type: 'application/json' }), handleDiscordInteractions);
 app.use(express.json({ limit: '5mb' }));
 
-app.get('/api/health', (req, res) => res.json({
-  ok: true,
-  discordPurchase: !!(DISCORD_BOT_TOKEN && DISCORD_CLIENT_ID && DISCORD_GUILD_ID && DISCORD_PUBLIC_KEY && stripe),
-  stripe: !!stripe
-}));
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // Simple post-payment pages for Discord /purchase (no storefront).
 function sendPayPage(res, title, bodyHtml) {
@@ -417,7 +405,7 @@ app.get('/pay/success', async (req, res) => {
         if (!roleGranted) {
           fulfillError =
             (result && result.roleError) ||
-            'Payment ok, but Discord role was not granted. Check bot role hierarchy / role IDs.';
+            'Payment received. License activation is still pending — wait a moment or contact support.';
         }
       } else {
         fulfillError = 'Payment is not marked paid yet. Wait a moment and refresh.';
@@ -934,12 +922,10 @@ function sessionPayload(token, session) {
 }
 
 app.get('/api/auth/config', (req, res) => {
+  // Minimal public probe — do not advertise role counts / guild wiring.
   res.json({
     ok: true,
     discordClientId: DISCORD_CLIENT_ID || null,
-    manualLoginEnabled: MANUAL_LOGIN_ENABLED,
-    guildConfigured: !!(DISCORD_BOT_TOKEN && DISCORD_GUILD_ID),
-    requiredRoleCount: requiredRoleIds().length,
     machineLock: true
   });
 });
@@ -1156,7 +1142,7 @@ app.post('/api/auth/tamper', (req, res) => {
   const clusterId = banIdentityCluster(identity, reason, { discordId, machineId, details, ip });
 
   console.error('[TAMPER]', new Date().toISOString(), { ...report, clusterId });
-  res.json({ ok: true, banned: true, clusterId: clusterId || null });
+  res.json({ ok: true, banned: true });
 });
 
 app.get('/api/auth/tamper-reports', requireAdmin, (req, res) => {
@@ -1646,26 +1632,36 @@ async function sendAdminNotification(items, discordId, buyerEmail, amount) {
 }
 
 /* ------------------------------------------------------------------
-   STATIC STOREFRONT: serve index.html / YoloScripts.html / assets
-   from this same process so one Render URL hosts site + API.
+   PUBLIC FILES ONLY — do not mount express.static on the whole repo
+   (that previously exposed fulfillment-server.js / docs / package files).
 ------------------------------------------------------------------ */
-app.use(express.static(__dirname, {
-  index: ['index.html', 'YoloScripts.html'],
-  extensions: ['html']
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get(['/YOLO.ico', '/favicon.ico'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'YOLO.ico'));
+});
+
+app.use('/setup-assets', express.static(path.join(__dirname, 'setup-assets'), {
+  fallthrough: false,
+  index: false,
+  dotfiles: 'deny',
+  maxAge: '7d'
 }));
 
-app.get('/', (req, res) => {
-  const indexPath = path.join(__dirname, 'index.html');
-  const fallback = path.join(__dirname, 'YoloScripts.html');
-  res.sendFile(fs.existsSync(indexPath) ? indexPath : fallback);
+app.use((req, res) => {
+  if (String(req.path || '').startsWith('/api/') || String(req.path || '').startsWith('/pay/')) {
+    return res.status(404).json({ error: 'not_found' });
+  }
+  return res.status(404).type('text').send('Not found');
 });
 
 app.listen(PORT, () => {
   console.log(`YoloScripts running on port ${PORT}`);
-  console.log(`  Storefront: ${SITE_URL}`);
-  console.log(`  Health:     /api/health`);
-  console.log(`  Update:     /api/update/latest.json`);
-  console.log(`  Discord:    /api/discord/interactions`);
+  if (!OWNER_DISCORD_IDS.length) {
+    console.warn('[auth] OWNER_DISCORD_ID not set — no owner lifetime entitlement until configured on Render.');
+  }
   registerPurchaseCommand().catch((err) => {
     console.error('[discord] register on boot failed', err.message || err);
   });

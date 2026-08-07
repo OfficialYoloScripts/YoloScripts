@@ -13,8 +13,10 @@ services:
       - key: ADMIN_KEY
         sync: false
       - key: DISCORD_CLIENT_ID
-        value: "1535016417940869140"
+        sync: false
       - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: OWNER_DISCORD_ID
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
@@ -24,3 +26,9 @@ services:
         sync: false
       - key: DISCORD_GUILD_ID
         sync: false
+      - key: DISCORD_PUBLIC_KEY
+        sync: false
+      - key: DISCORD_REQUIRED_ROLE_IDS
+        sync: false
+      - key: MANUAL_LOGIN_ENABLED
+        value: "false"
