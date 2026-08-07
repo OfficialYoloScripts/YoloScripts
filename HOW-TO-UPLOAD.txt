@@ -1,0 +1,13 @@
+YoloScripts — upload this folder to GitHub
+=========================================
+
+1. Unzip this file.
+2. Open the upload-to-github folder.
+3. Upload ALL files inside it into your GitHub repo
+   (OfficialYoloScripts/YoloScripts), replacing old copies.
+4. Render will auto-redeploy.
+5. Keep ADMIN_KEY / Stripe secrets in Render Environment only
+   — they are intentionally blank in the baked HTML.
+
+Generated: 2026-08-07T04:40:45.720Z
+Products baked: 1
