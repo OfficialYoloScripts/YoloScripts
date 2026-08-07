@@ -24,19 +24,39 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const Stripe = require('stripe');
 
+const crypto = require('crypto');
+
 const PORT = process.env.PORT || 4242;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 const SITE_URL = process.env.SITE_URL || 'https://yoloscripts.onrender.com/';
+const SITE_ORIGIN = String(SITE_URL).replace(/\/+$/, '');
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
+const DISCORD_REQUIRED_ROLE_IDS = String(process.env.DISCORD_REQUIRED_ROLE_IDS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+// Accept OWNER_DISCORD_IDS (preferred) or singular OWNER_DISCORD_ID from Render.
+const OWNER_DISCORD_IDS = String(
+  process.env.OWNER_DISCORD_IDS || process.env.OWNER_DISCORD_ID || '1199408578717560942'
+).split(',').map(s => s.trim()).filter(Boolean);
+const MANUAL_LOGIN_ENABLED = String(process.env.MANUAL_LOGIN_ENABLED || 'true').toLowerCase() !== 'false';
+const YOLO_AUTH_OPEN = String(process.env.YOLO_AUTH_OPEN || '').toLowerCase() === 'true';
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+const DESKTOP_SESSIONS_FILE = path.join(DATA_DIR, 'desktop_sessions.json');
+const LICENSE_BINDINGS_FILE = path.join(DATA_DIR, 'license_bindings.json');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRODUCTS_FILE)) fs.writeFileSync(PRODUCTS_FILE, '[]');
 if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]');
+if (!fs.existsSync(DESKTOP_SESSIONS_FILE)) fs.writeFileSync(DESKTOP_SESSIONS_FILE, '{}');
+if (!fs.existsSync(LICENSE_BINDINGS_FILE)) fs.writeFileSync(LICENSE_BINDINGS_FILE, '{}');
+
+// state → { port, machineId, createdAt } for desktop OAuth handshake
+const pendingDesktopLogins = new Map();
 
 function readJSON(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return []; } }
 function writeJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
@@ -64,6 +84,318 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), handl
 app.use(express.json({ limit: '5mb' }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+/* ------------------------------------------------------------------
+   DESKTOP AUTH (Yolo.exe Discord login — Vanta-style workflow)
+   Register this redirect URL in the Discord Developer Portal:
+     https://yoloscripts.onrender.com/api/auth/desktop/callback
+------------------------------------------------------------------ */
+function readSessions() {
+  const obj = readJSON(DESKTOP_SESSIONS_FILE);
+  return obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+}
+function writeSessions(obj) { writeJSON(DESKTOP_SESSIONS_FILE, obj); }
+
+function readBindings() {
+  const obj = readJSON(LICENSE_BINDINGS_FILE);
+  return obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+}
+function writeBindings(obj) { writeJSON(LICENSE_BINDINGS_FILE, obj); }
+
+function isOwner(discordId) {
+  return OWNER_DISCORD_IDS.includes(String(discordId || ''));
+}
+
+function productRoleIds() {
+  return readJSON(PRODUCTS_FILE)
+    .map(p => p && p.discordRoleId)
+    .filter(Boolean)
+    .map(String);
+}
+
+function requiredRoleIds() {
+  const fromEnv = DISCORD_REQUIRED_ROLE_IDS.slice();
+  const fromProducts = productRoleIds();
+  return Array.from(new Set(fromEnv.concat(fromProducts)));
+}
+
+async function fetchDiscordUser(accessToken) {
+  const res = await fetch('https://discord.com/api/v10/users/@me', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!res.ok) throw new Error('discord user fetch failed');
+  return res.json();
+}
+
+async function memberHasRequiredRole(discordId) {
+  if (isOwner(discordId)) {
+    return { entitled: true, label: 'owner', owner: true };
+  }
+  if (YOLO_AUTH_OPEN) {
+    return { entitled: true, label: 'open-auth', owner: false };
+  }
+  const rolesNeeded = requiredRoleIds();
+  if (!DISCORD_BOT_TOKEN || !DISCORD_GUILD_ID) {
+    return { entitled: false, label: '', owner: false, error: 'License server is not ready.' };
+  }
+  if (!rolesNeeded.length) {
+    return { entitled: false, label: '', owner: false, error: 'No product roles configured.' };
+  }
+  const res = await fetch(
+    `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordId}`,
+    { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
+  );
+  if (res.status === 404) {
+    return { entitled: false, label: '', owner: false, error: 'Join the Yolo Discord server after purchase.' };
+  }
+  if (!res.ok) {
+    return { entitled: false, label: '', owner: false, error: 'Could not verify Discord membership.' };
+  }
+  const member = await res.json();
+  const have = new Set((member.roles || []).map(String));
+  const hit = rolesNeeded.find(r => have.has(String(r)));
+  if (!hit) {
+    return { entitled: false, label: '', owner: false, error: 'No active Yolo license on this Discord account.' };
+  }
+  return { entitled: true, label: 'licensed', owner: false };
+}
+
+/** Bind buyer license to one PC. Owner accounts skip machine lock. */
+function activateOrCheckMachine(discordId, machineId, owner) {
+  if (owner) {
+    return { ok: true, owner: true };
+  }
+  const mid = String(machineId || '').trim().toLowerCase();
+  if (!mid || mid.length < 16) {
+    return { ok: false, error: 'This PC could not be identified for license activation.' };
+  }
+  const bindings = readBindings();
+  const existing = bindings[String(discordId)];
+  if (!existing || !existing.machineId) {
+    bindings[String(discordId)] = {
+      machineId: mid,
+      activatedAt: Date.now()
+    };
+    writeBindings(bindings);
+    return { ok: true, activated: true };
+  }
+  if (String(existing.machineId).toLowerCase() !== mid) {
+    return {
+      ok: false,
+      error: 'This license is already activated on another PC and cannot be used here.'
+    };
+  }
+  return { ok: true };
+}
+
+function avatarUrlFor(user) {
+  if (user.avatar) {
+    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+  }
+  const idx = Number(user.discriminator || 0) % 5;
+  return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+}
+
+function issueDesktopSession(user, entitlement, machineId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const sessions = readSessions();
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // 30 days
+  sessions[token] = {
+    discordId: user.id,
+    username: user.username,
+    avatarUrl: avatarUrlFor(user),
+    entitled: !!entitlement.entitled,
+    entitlementLabel: entitlement.owner ? 'owner' : 'licensed',
+    owner: !!entitlement.owner,
+    machineId: machineId || '',
+    expiresAt,
+    createdAt: Date.now()
+  };
+  writeSessions(sessions);
+  return { token, expiresAt, session: sessions[token] };
+}
+
+function sessionPayload(token, session) {
+  return {
+    accessToken: token,
+    token,
+    expiresAt: session.expiresAt,
+    entitled: !!session.entitled,
+    entitlementLabel: session.owner ? 'owner' : 'licensed',
+    owner: !!session.owner,
+    machineBound: !session.owner,
+    user: {
+      id: session.discordId,
+      username: session.username,
+      avatarUrl: session.avatarUrl || ''
+    }
+  };
+}
+
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    ok: true,
+    discordClientId: DISCORD_CLIENT_ID || null,
+    manualLoginEnabled: MANUAL_LOGIN_ENABLED,
+    guildConfigured: !!(DISCORD_BOT_TOKEN && DISCORD_GUILD_ID),
+    requiredRoleCount: requiredRoleIds().length,
+    machineLock: true
+  });
+});
+
+app.get('/api/auth/desktop/login', (req, res) => {
+  const port = Number(req.query.port || 0);
+  const state = String(req.query.state || '');
+  const machineId = String(req.query.machineId || '').trim().toLowerCase();
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+    return res.status(500).send('Discord OAuth is not configured (DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET).');
+  }
+  if (!port || port < 1024 || port > 65535 || !state) {
+    return res.status(400).send('Invalid desktop login request.');
+  }
+  pendingDesktopLogins.set(state, { port, machineId, createdAt: Date.now() });
+  const redirectUri = `${SITE_ORIGIN}/api/auth/desktop/callback`;
+  const params = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    response_type: 'code',
+    scope: 'identify',
+    redirect_uri: redirectUri,
+    state,
+    prompt: 'consent'
+  });
+  res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
+});
+
+app.get('/api/auth/desktop/callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    const state = String(req.query.state || '');
+    const pending = pendingDesktopLogins.get(state);
+    pendingDesktopLogins.delete(state);
+    if (!code || !pending) {
+      return res.status(400).send('Invalid or expired sign-in state. Return to Yolo and try again.');
+    }
+    const redirectUri = `${SITE_ORIGIN}/api/auth/desktop/callback`;
+    const body = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri
+    });
+    const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    if (!tokenRes.ok) {
+      return res.status(400).send('Discord token exchange failed.');
+    }
+    const tokenJson = await tokenRes.json();
+    const user = await fetchDiscordUser(tokenJson.access_token);
+    const entitlement = await memberHasRequiredRole(user.id);
+    if (!entitlement.entitled) {
+      return res.status(403).send(entitlement.error || 'Not entitled to Yolo.');
+    }
+    const machine = activateOrCheckMachine(user.id, pending.machineId, !!entitlement.owner);
+    if (!machine.ok) {
+      return res.status(403).send(machine.error || 'License machine check failed.');
+    }
+    const issued = issueDesktopSession(user, entitlement, pending.machineId);
+    const back = `http://127.0.0.1:${pending.port}/ok?token=${encodeURIComponent(issued.token)}`;
+    res.redirect(back);
+  } catch (err) {
+    console.error('desktop callback error', err);
+    res.status(500).send('Sign-in failed.');
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace(/^Bearer\s+/i, '').trim();
+  const machineId = String(req.headers['x-yolo-machine'] || req.query.machineId || '').trim().toLowerCase();
+  if (!token) return res.status(401).json({ error: 'unauthorized' });
+  const sessions = readSessions();
+  const session = sessions[token];
+  if (!session) return res.status(401).json({ error: 'invalid session' });
+  if (session.expiresAt && session.expiresAt < Math.floor(Date.now() / 1000)) {
+    delete sessions[token];
+    writeSessions(sessions);
+    return res.status(401).json({ error: 'session expired' });
+  }
+  memberHasRequiredRole(session.discordId).then((entitlement) => {
+    session.entitled = !!entitlement.entitled;
+    session.owner = !!entitlement.owner;
+    session.entitlementLabel = entitlement.owner ? 'owner' : 'licensed';
+    sessions[token] = session;
+    writeSessions(sessions);
+    if (!session.entitled) {
+      return res.status(403).json({
+        error: entitlement.error || 'Not entitled',
+        entitled: false,
+        user: { id: session.discordId, username: session.username, avatarUrl: session.avatarUrl }
+      });
+    }
+    const machine = activateOrCheckMachine(session.discordId, machineId || session.machineId, !!entitlement.owner);
+    if (!machine.ok) {
+      return res.status(403).json({ error: machine.error || 'Wrong PC for this license', entitled: false });
+    }
+    if (machineId) {
+      session.machineId = machineId;
+      sessions[token] = session;
+      writeSessions(sessions);
+    }
+    res.json(sessionPayload(token, session));
+  }).catch(() => res.json(sessionPayload(token, session)));
+});
+
+app.post('/api/auth/manual', async (req, res) => {
+  if (!MANUAL_LOGIN_ENABLED) {
+    return res.status(403).json({ error: 'Manual Discord ID login is disabled.' });
+  }
+  const discordId = String((req.body && req.body.discordId) || '').replace(/\D/g, '');
+  const machineId = String((req.body && req.body.machineId) || '').trim().toLowerCase();
+  if (discordId.length < 17 || discordId.length > 20) {
+    return res.status(400).json({ error: 'Enter a valid numeric Discord ID between 17 and 20 digits.' });
+  }
+  // Manual ID entry is developer-only. Buyers must use Login with Discord.
+  if (!isOwner(discordId)) {
+    return res.status(403).json({
+      error: 'Manual sign-in is only for the developer account. Buyers must use Login with Discord after purchase.'
+    });
+  }
+  try {
+    const entitlement = await memberHasRequiredRole(discordId);
+    if (!entitlement.entitled) {
+      return res.status(403).json({ error: entitlement.error || 'Not entitled', entitled: false });
+    }
+    let username = discordId;
+    let avatarUrl = '';
+    if (DISCORD_BOT_TOKEN) {
+      const ures = await fetch(`https://discord.com/api/v10/users/${discordId}`, {
+        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
+      });
+      if (ures.ok) {
+        const u = await ures.json();
+        username = u.username || username;
+        avatarUrl = avatarUrlFor(u);
+      }
+    }
+    const issued = issueDesktopSession(
+      { id: discordId, username, avatar: null, discriminator: '0' },
+      entitlement,
+      machineId
+    );
+    const sessions = readSessions();
+    sessions[issued.token].avatarUrl = avatarUrl || sessions[issued.token].avatarUrl;
+    sessions[issued.token].username = username;
+    writeSessions(sessions);
+    res.json(sessionPayload(issued.token, sessions[issued.token]));
+  } catch (err) {
+    console.error('manual auth error', err);
+    res.status(500).json({ error: err.message || 'manual auth failed' });
+  }
+});
 
 /* ------------------------------------------------------------------
    DEVMODE / WEBHOOK ping endpoints
