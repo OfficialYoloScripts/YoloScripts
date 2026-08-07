@@ -1,23 +1,19 @@
 /**
  * YoloScripts fulfillment-server.js
  * --------------------------------------------------------------
- * OPTIONAL companion server for YoloScripts.html.
+ * Serves the storefront (index.html / YoloScripts.html) AND the API:
+ *   - Discord-ready static site
+ *   - Verified Stripe payments
+ *   - Automatic Discord role granting
+ *   - Purchase confirmation emails
+ *   - Multi-item cart checkout
+ *   - Cross-device order ledger for Devmode
  *
- * The storefront (YoloScripts.html) works standalone — buyers can pay via
- * Stripe Payment Links and you fulfill orders by hand. This server is what
- * upgrades the store to full automation:
- *   - Verified Stripe payments (server checks Stripe directly, can't be spoofed)
- *   - Automatic Discord role granting via your bot
- *   - Server-sent purchase confirmation emails
- *   - Multi-item cart checkout (real Stripe Checkout Sessions)
- *   - A cross-device order ledger for the Devmode "Orders" tab
+ * Run locally:
+ *   npm install
+ *   npm start
  *
- * Nothing in this file is required to run the store — it's an add-on.
- * See SETUP-GUIDE.md for full setup instructions.
- *
- * Run:
- *   npm install express stripe cors dotenv nodemailer
- *   node fulfillment-server.js
+ * Deploy: push this folder to GitHub → connect Render (see README.md).
  */
 
 require('dotenv').config();
@@ -30,7 +26,7 @@ const Stripe = require('stripe');
 
 const PORT = process.env.PORT || 4242;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
-const SITE_URL = process.env.SITE_URL || 'http://localhost:8080/YoloScripts.html';
+const SITE_URL = process.env.SITE_URL || 'https://yoloscripts.onrender.com/';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -45,10 +41,19 @@ if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]');
 function readJSON(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return []; } }
 function writeJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
-function requireAdmin(req, res, next) {
+function extractAdminKey(req) {
   const auth = req.headers.authorization || '';
-  const key = auth.replace(/^Bearer\s+/i, '');
-  if (!ADMIN_KEY || key !== ADMIN_KEY) return res.status(401).json({ error: 'unauthorized' });
+  if (/^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '').trim();
+  if (req.headers['x-api-key']) return String(req.headers['x-api-key']).trim();
+  if (req.headers['x-admin-key']) return String(req.headers['x-admin-key']).trim();
+  return '';
+}
+
+function requireAdmin(req, res, next) {
+  const key = extractAdminKey(req);
+  if (!ADMIN_KEY || key !== ADMIN_KEY) {
+    return res.status(401).json({ error: 'unauthorized', message: 'Missing or invalid ADMIN_KEY' });
+  }
   next();
 }
 
@@ -56,9 +61,43 @@ const app = express();
 app.use(cors());
 // Stripe webhook needs the raw body, so it's mounted BEFORE the JSON parser.
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+/* ------------------------------------------------------------------
+   DEVMODE / WEBHOOK ping endpoints
+   Your built-in Devmode dashboard syncs via POST /api/admin/sync-products.
+   These /api/sync and /api/webhook routes are simple authenticated receivers
+   for testing or external tools that only need a 200 acknowledgement.
+------------------------------------------------------------------ */
+function handleDevmodeWebhook(req, res) {
+  console.log('[devmode-webhook]', new Date().toISOString(), {
+    path: req.path,
+    headers: {
+      authorization: req.headers.authorization ? '[present]' : '[missing]',
+      'x-api-key': req.headers['x-api-key'] ? '[present]' : '[missing]'
+    },
+    body: req.body
+  });
+
+  // If a full product catalog is included, persist it (same as Sync button).
+  const { products, settings } = req.body || {};
+  if (Array.isArray(products)) {
+    writeJSON(PRODUCTS_FILE, products);
+    if (settings) writeJSON(path.join(DATA_DIR, 'settings.json'), settings);
+    console.log('[devmode-webhook] saved products:', products.length);
+  }
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Webhook received',
+    ok: true
+  });
+}
+
+app.post('/api/sync', requireAdmin, handleDevmodeWebhook);
+app.post('/api/webhook', requireAdmin, handleDevmodeWebhook);
 
 /* ------------------------------------------------------------------
    ADMIN: sync products/settings pushed from the Devmode dashboard
@@ -68,7 +107,8 @@ app.post('/api/admin/sync-products', requireAdmin, (req, res) => {
   if (!Array.isArray(products)) return res.status(400).json({ error: 'products array required' });
   writeJSON(PRODUCTS_FILE, products);
   if (settings) writeJSON(path.join(DATA_DIR, 'settings.json'), settings);
-  res.json({ ok: true, count: products.length });
+  console.log('[sync-products] saved', products.length, 'products');
+  res.json({ ok: true, count: products.length, status: 'success', message: 'Webhook received' });
 });
 
 app.get('/api/admin/orders', requireAdmin, (req, res) => {
@@ -310,4 +350,23 @@ async function sendAdminNotification(items, discordId, buyerEmail, amount) {
   }
 }
 
-app.listen(PORT, () => console.log(`YoloScripts fulfillment server running on port ${PORT}`));
+/* ------------------------------------------------------------------
+   STATIC STOREFRONT: serve index.html / YoloScripts.html / assets
+   from this same process so one Render URL hosts site + API.
+------------------------------------------------------------------ */
+app.use(express.static(__dirname, {
+  index: ['index.html', 'YoloScripts.html'],
+  extensions: ['html']
+}));
+
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'index.html');
+  const fallback = path.join(__dirname, 'YoloScripts.html');
+  res.sendFile(fs.existsSync(indexPath) ? indexPath : fallback);
+});
+
+app.listen(PORT, () => {
+  console.log(`YoloScripts running on port ${PORT}`);
+  console.log(`  Storefront: ${SITE_URL}`);
+  console.log(`  Health:     /api/health`);
+});
