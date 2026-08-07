@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: yoloscripts
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: SITE_URL
+        value: https://yoloscripts.onrender.com/
+      - key: ADMIN_KEY
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        value: "1535016417940869140"
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
