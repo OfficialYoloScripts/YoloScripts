@@ -2,10 +2,11 @@
   "name": "yoloscripts-fulfillment",
   "version": "1.0.0",
   "private": true,
-  "description": "YoloScripts Stripe + Discord fulfillment server",
+  "description": "YoloScripts storefront + Stripe/Discord fulfillment server",
   "main": "fulfillment-server.js",
   "scripts": {
-    "start": "node fulfillment-server.js"
+    "start": "node fulfillment-server.js",
+    "test:webhook": "node test-webhook.js"
   },
   "engines": {
     "node": ">=18"
